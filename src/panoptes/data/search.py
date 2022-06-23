@@ -17,6 +17,7 @@ logger = logging.getLogger()
 
 
 def search_observations(
+        by_name=None,
         coords=None,
         unit_id=None,
         start_date=None,
@@ -24,7 +25,6 @@ def search_observations(
         ra=None,
         dec=None,
         radius=10,  # degrees
-        field_name=None,
         status='CREATED',
         min_num_images=1,
         source=None,
@@ -57,6 +57,8 @@ def search_observations(
     Total minutes exposure: 20376.83
 
     Args:
+        by_name (str|None): If present, this will use the `SkyCoords.from_name` method
+            to do a search for the appropriate coords.
         coords (`astropy.coordinates.SkyCoord`|None): A valid coordinate instance.
         ra (float|None): The RA position in degrees of the center of search.
         dec (float|None): The Dec position in degrees of the center of the search.
@@ -71,9 +73,6 @@ def search_observations(
         status (str|list|None): A str or list of observation status to include.
             Defaults to "matched" for observations that have been fully processed. Passing
             `None` will return all status.
-        field_name (str|None): If present, this will filter the returned observations based on
-            the user-defined field name. Note that this can be an arbitrary string defined by
-            the PANOPTES operator.
         min_num_images (int): Minimum number of images the observation should have, default 1.
         source (`pandas.DataFrame`|None): The dataframe to use or the search.
             If `None` (default) then the `source_url` will be used to look up the file.
@@ -89,8 +88,8 @@ def search_observations(
     logger.debug(f'Setting up search params')
 
     if coords is None:
-        if field_name is not None:
-            coords = SkyCoord.from_name(field_name)
+        if by_name is not None:
+            coords = SkyCoord.from_name(by_name)
         else:
             try:
                 coords = SkyCoord(ra=ra, dec=dec, unit='degree')
@@ -147,10 +146,6 @@ def search_observations(
     if len(unit_ids) > 0 and unit_ids != 'The Whole World! 🌎':
         obs_df.query(f'unit_id in {listify(unit_ids)}', inplace=True)
     logger.debug(f'Found {len(obs_df)} observations after unit filter')
-
-    if field_name is not None:
-        obs_df.query(f'field_name == "{field_name}"', inplace=True)
-    logger.debug(f'Found {len(obs_df)} observations after field_name filter')
 
     if status is not None:
         obs_df.query(f'status in {listify(status)}', inplace=True)
