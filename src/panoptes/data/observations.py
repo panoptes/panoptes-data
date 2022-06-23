@@ -1,3 +1,4 @@
+import shutil
 import warnings
 from dataclasses import dataclass
 from datetime import datetime
@@ -224,7 +225,7 @@ class ObservationInfo:
         for img in img_iter:
             fn = Path(download_file(img))
             new_fn = output_dir / Path(img).name
-            fn.rename(new_fn)
+            shutil.move(fn, new_fn)
             img_paths.append(str(new_fn))
 
         return img_paths
