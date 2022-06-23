@@ -1,13 +1,13 @@
 import re
 from typing import Pattern
 
-from pydantic import BaseSettings, HttpUrl
+from pydantic import BaseSettings, AnyHttpUrl
 
 
 class CloudSettings(BaseSettings):
-    img_base_url: HttpUrl = 'https://storage.googleapis.com'
-    img_metadata_url: HttpUrl = 'https://us-central1-panoptes-exp.cloudfunctions.net/get-observation-metadata'
-    observations_url: HttpUrl = 'https://storage.googleapis.com/panoptes-exp.appspot.com/observations.csv'
+    img_base_url: AnyHttpUrl = 'https://storage.googleapis.com'
+    img_metadata_url: AnyHttpUrl = 'https://us-central1-panoptes-exp.cloudfunctions.net/get-observation-metadata'
+    observations_url: AnyHttpUrl = 'https://storage.googleapis.com/panoptes-exp.appspot.com/observations.csv'
 
 
 # This is a regular expression that will match the default file layout for images taken
