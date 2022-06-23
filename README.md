@@ -12,7 +12,7 @@ pip install panoptes-data
 
 ## Examples
 
-> :info: See example Jupyter Notebooks in the [`notebooks`](notebooks/) folder.
+> :bulb: See example Jupyter Notebooks in the [`notebooks`](notebooks/) folder.
 
 ```py
 >>> from panoptes.data.search import search_observations
