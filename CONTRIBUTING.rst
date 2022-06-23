@@ -1,353 +1,268 @@
-.. todo:: THIS IS SUPPOSED TO BE AN EXAMPLE. MODIFY IT ACCORDING TO YOUR NEEDS!
-
-   The document assumes you are using a source repository service that promotes a
-   contribution model similar to `GitHub's fork and pull request workflow`_.
-   While this is true for the majority of services (like GitHub, GitLab,
-   BitBucket), it might not be the case for private repositories (e.g., when
-   using Gerrit).
-
-   Also notice that the code examples might refer to GitHub URLs or the text
-   might use GitHub specific terminology (e.g., *Pull Request* instead of *Merge
-   Request*).
-
-   Please make sure to check the document having these assumptions in mind
-   and update things accordingly.
-
-.. todo:: Provide the correct links/replacements at the bottom of the document.
-
-.. todo:: You might want to have a look on `PyScaffold's contributor's guide`_,
-
-   especially if your project is open source. The text should be very similar to
-   this template, but there are a few extra contents that you might decide to
-   also include, like mentioning labels of your issue tracker or automated
-   releases.
-
-
-============
-Contributing
-============
-
-Welcome to ``panoptes-data`` contributor's guide.
-
-This document focuses on getting any potential contributor familiarized
-with the development processes, but `other kinds of contributions`_ are also
-appreciated.
-
-If you are new to using git_ or have never collaborated in a project previously,
-please have a look at `contribution-guide.org`_. Other resources are also
-listed in the excellent `guide created by FreeCodeCamp`_ [#contrib1]_.
-
-Please notice, all users and contributors are expected to be **open,
-considerate, reasonable, and respectful**. When in doubt, `Python Software
-Foundation's Code of Conduct`_ is a good reference in terms of behavior
-guidelines.
-
-
-Issue Reports
-=============
-
-If you experience bugs or general issues with ``panoptes-data``, please have a look
-on the `issue tracker`_. If you don't see anything useful there, please feel
-free to fire an issue report.
-
-.. tip::
-   Please don't forget to include the closed issues in your search.
-   Sometimes a solution was already reported, and the problem is considered
-   **solved**.
-
-New issue reports should include information about your programming environment
-(e.g., operating system, Python version) and steps to reproduce the problem.
-Please try also to simplify the reproduction steps to a very minimal example
-that still illustrates the problem you are facing. By removing other factors,
-you help us to identify the root cause of the issue.
-
-
-Documentation Improvements
-==========================
-
-You can help improve ``panoptes-data`` docs by making them more readable and coherent, or
-by adding missing information and correcting mistakes.
-
-``panoptes-data`` documentation uses Sphinx_ as its main documentation compiler.
-This means that the docs are kept in the same repository as the project code, and
-that any documentation update is done in the same way was a code contribution.
-
-.. todo:: Don't forget to mention which markup language you are using.
-
-    e.g.,  reStructuredText_ or CommonMark_ with MyST_ extensions.
-
-.. todo:: If your project is hosted on GitHub, you can also mention the following tip:
-
-   .. tip::
-      Please notice that the `GitHub web interface`_ provides a quick way of
-      propose changes in ``panoptes-data``'s files. While this mechanism can
-      be tricky for normal code contributions, it works perfectly fine for
-      contributing to the docs, and can be quite handy.
-
-      If you are interested in trying this method out, please navigate to
-      the ``docs`` folder in the source repository_, find which file you
-      would like to propose changes and click in the little pencil icon at the
-      top, to open `GitHub's code editor`_. Once you finish editing the file,
-      please write a message in the form at the bottom of the page describing
-      which changes have you made and what are the motivations behind them and
-      submit your proposal.
-
-When working on documentation changes in your local machine, you can
-compile them using |tox|_::
-
-    tox -e docs
-
-and use Python's built-in web server for a preview in your web browser
-(``http://localhost:8000``)::
-
-    python3 -m http.server --directory 'docs/_build/html'
-
-
-Code Contributions
+==================
+CONTRIBUTING GUIDE
 ==================
 
-.. todo:: Please include a reference or explanation about the internals of the project.
+Please see the `code of
+conduct <https://github.com/panoptes/POCS/blob/develop/CODE_OF_CONDUCT.md>`__
+for our playground rules and follow them during all your contributions.
 
-   An architecture description, design principles or at least a summary of the
-   main concepts will make it easy for potential contributors to get started
-   quickly.
+Getting Started
+===============
 
-Submit an issue
----------------
+We prefer that all changes to POCS have an associated `GitHub Issue in
+the project <https://github.com/panoptes/POCS/issues>`__ that explains
+why it is needed. This allows us to debate the best approach to address
+the issue before folks spend a lot of time writing code. If you are
+unsure about a possible contribution to the project, please contact the
+project owners about your idea; of course, an
+`issue <https://github.com/panoptes/POCS/issues>`__ is a good way to do
+this.
 
-Before you work on any non-trivial code contribution it's best to first create
-a report in the `issue tracker`_ to start a discussion on the subject.
-This often provides additional considerations and avoids unnecessary work.
+Pull Request Process
+====================
 
-Create an environment
----------------------
+.. note::
 
-Before you start coding, we recommend creating an isolated `virtual
-environment`_ to avoid any problems with your installed Python packages.
-This can easily be done via either |virtualenv|_::
+    This is a summary of the process. See the `POCS wiki <https://github.com/panoptes/POCS/wiki/PANOPTES-Feature-Development-Process>`_ for more info.
 
-    virtualenv <PATH TO VENV>
-    source <PATH TO VENV>/bin/activate
+-  Pre-requisites
+-  Ensure you have a `github account. <https://github.com/join>`__
+-  `Setup ssh access for
+   github <https://help.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh>`__.
+-  If the change you wish to make is not already an `Issue in the
+   project <https://github.com/panoptes/POCS/issues>`__, please create
+   one specifying the need.
 
-or Miniconda_::
+Process
+^^^^^^^
 
-    conda create -n panoptes-data python=3 six virtualenv pytest pytest-cov
-    conda activate panoptes-data
+1.  Create a fork of the repository via github (button in top-right).
+2.  Clone your fork to your local system:
 
-Clone the repository
---------------------
+    .. code-block::
+        bash
 
-#. Create an user account on |the repository service| if you do not already have one.
-#. Fork the project repository_: click on the *Fork* button near the top of the
-   page. This creates a copy of the code under your account on |the repository service|.
-#. Clone this copy to your local disk::
+        cd $PANDIR
+        git clone git@github.com:YOUR-GITHUB-NAME/POCS.git
 
-    git clone git@github.com:YourLogin/panoptes-data.git
-    cd panoptes-data
+3.  Set the "upstream" branch to ``panoptes`` and fetch the upstream changes:
 
-#. You should run::
+    .. code-block::
+        bash
 
-    pip install -U pip setuptools -e .
+        cd POCS
+        git remote add upstream https://github.com/panoptes/POCS.git
+        git fetch upstream
 
-   to be able to import the package under development in the Python REPL.
+4.  Use a topic branch within your fork to make changes. All of our repositories
+    have a default branch of ``develop`` when you first clone them, but your work
+    should be in a separate branch (see note below). Your branch should be based
+    off of the ``upstream/develop`` branch.
 
-   .. todo:: if you are not using pre-commit, please remove the following item:
+    Create a branch with a descriptive name, e.g.:
 
-#. Install |pre-commit|_::
+    .. code-block::
+        bash
 
-    pip install pre-commit
-    pre-commit install
+        git checkout -b new-camera-simulator upstream/develop
+        git checkout -b issue-28 upstream/develop
 
-   ``panoptes-data`` comes with a lot of hooks configured to automatically help the
-   developer to check the code being written.
+5.  Ensure that your code meets this project's standards (see Testing and Code
+    Formatting below).
 
-Implement your changes
-----------------------
+6. Run the testing suite locally to ensure that all tests are passing. See Testing below.
 
-#. Create a branch to hold your changes::
+7. Submit a pull request to the repository, be sure to reference the issue number it addresses.
 
-    git checkout -b my-feature
+.. note::
 
-   and start making changes. Never work on the main branch!
+    See `"A successful Git branching model" <https://nvie.com/posts/a-successful-git-branching-model/>`__
+    for details on how the repository is structured.
 
-#. Start your work on this branch. Don't forget to add docstrings_ to new
-   functions, modules and classes, especially if they are part of public APIs.
 
-#. Add yourself to the list of contributors in ``AUTHORS.rst``.
+Code Formatting
+===============
 
-#. When you’re done editing, do::
+-  All Python should use `PEP 8
+   Standards <https://www.python.org/dev/peps/pep-0008/>`__
+-  Line length is set at 100 characters instead of 80.
+-  It is recommended to have your editor auto-format code whenever you
+   save a file rather than attempt to go back and change an entire file
+   all at once. There are many plugins that exist for this.
+-  You can also use `yapf (Yet Another Python
+   Formatter) <https://github.com/google/yapf>`__ for which POCS
+   includes a style file (.style.yapf). For example::
 
-    git add <MODIFIED FILES>
-    git commit
+       # cd to the root of your workspace.
+       cd $(git rev-parse --show-toplevel)
+       # Format the modified python files in your workspace.
+       yapf -i $(git diff --name-only | egrep '\.py$')``
 
-   to record your changes in git_.
+-  Do not leave in commented-out code or unnecessary whitespace.
+-  Variable/function/class and file names should be meaningful and
+   descriptive.
+-  File names should be lower case and underscored, not contain spaces.
+   For example, ``my_file.py`` instead of ``My File.py``.
+-  Define any project specific terminology or abbreviations you use in
+   the file you use them.
 
-   .. todo:: if you are not using pre-commit, please remove the following item:
+Log Messages
+============
 
-   Please make sure to see the validation messages from |pre-commit|_ and fix
-   any eventual issues.
-   This should automatically use flake8_/black_ to check/fix the code style
-   in a way that is compatible with the project.
+Use appropriate logging:
 
-   .. important:: Don't forget to add unit tests and documentation in case your
-      contribution adds an additional feature and is not just a bugfix.
+* DEBUG (i.e. ``self.logger.debug()``) should attempt to capture all run*time information.
 
-      Moreover, writing a `descriptive commit message`_ is highly recommended.
-      In case of doubt, you can check the commit history with::
+* INFO (i.e. ``self.logger.info()``) should be used sparingly and meant to convey information to a person actively watching a running unit.
 
-         git log --graph --decorate --pretty=oneline --abbrev-commit --all
+* WARNING (i.e. ``self.logger.warning()``) should alert when something does not go as expected but operation of unit can continue.
 
-      to look for recurring communication patterns.
+* ERROR (i.e. ``self.logger.error()``) should be used at critical levels when operation cannot continue.
 
-#. Please check that your changes don't break any unit tests with::
+* The logger supports variable information without the use of the ``format`` method.
 
-    tox
+* There is a ``say`` method available on the main ``POCS`` class that is meant to be used in friendly manner to convey information to a user. This should be used only for personable output and is typically displayed in the "chat box"of the PAWS website. These messages are also sent to the INFO level logger.
 
-   (after having installed |tox|_ with ``pip install tox`` or ``pipx``).
+Logging examples:
+^^^^^^^^^^^^^^^^^
 
-   You can also use |tox|_ to run several other pre-configured tasks in the
-   repository. Try ``tox -av`` to see a list of the available checks.
+*Note: These are meant to illustrate the logging calls and are not
+necessarily indicative of real operation*
 
-Submit your contribution
-------------------------
+.. code-block::
+    python
 
-#. If everything works fine, push your local branch to |the repository service| with::
+    self.say("I'm all ready to go, first checking the weather")
 
-    git push -u origin my-feature
+    self.logger.info(f'PANOPTES unit initialized: {self.name}')
 
-#. Go to the web page of your fork and click |contribute button|
-   to send your changes for review.
+    self.logger.debug("Setting up weather station")
 
-   .. todo:: if you are using GitHub, you can uncomment the following paragraph
+    self.logger.warning(f'Problem getting wind safety: {e!r}')
 
-      Find more detailed information in `creating a PR`_. You might also want to open
-      the PR as a draft first and mark it as ready for review after the feedbacks
-      from the continuous integration (CI) system or any required fixes.
+    self.logger.debug(f'Rain: {is_raining} Clouds: {is_cloudy} Dark: {is_dark} Temp: {temp:.02f}')
 
+    self.logger.error('Unable to connect to AAG Cloud Sensor, cannot continue')
 
-Troubleshooting
----------------
+Viewing log files
+^^^^^^^^^^^^^^^^^
 
-The following tips can be used when facing problems to build or test the
-package:
+-  You typically want to follow an active log file by using ``tail -F``
+   on the command line.
 
-#. Make sure to fetch all the tags from the upstream repository_.
-   The command ``git describe --abbrev=0 --tags`` should return the version you
-   are expecting. If you are trying to run CI scripts in a fork repository,
-   make sure to push all the tags.
-   You can also try to remove all the egg files or the complete egg folder, i.e.,
-   ``.eggs``, as well as the ``*.egg-info`` folders in the ``src`` folder or
-   potentially in the root of your project.
+.. code-block:: bash
 
-#. Sometimes |tox|_ misses out when new dependencies are added, especially to
-   ``setup.cfg`` and ``docs/requirements.txt``. If you find any problems with
-   missing dependencies when running a command with |tox|_, try to recreate the
-   ``tox`` environment using the ``-r`` flag. For example, instead of::
+    tail -F $PANDIR/logs/panoptes.log
 
-    tox -e docs
 
-   Try running::
+Test POCS
+=========
 
-    tox -r -e docs
+POCS comes with a testing suite that allows it to test that all of the software
+works and is installed correctly. Running the test suite by default will use simulators for all of the hardware and is meant to test that
+the software works correctly. Additionally, the testing suite can be run
+with various flags to test that attached hardware is working properly.
 
-#. Make sure to have a reliable |tox|_ installation that uses the correct
-   Python version (e.g., 3.7+). When in doubt you can run::
+Software Testing
+^^^^^^^^^^^^^^^^
 
-    tox --version
-    # OR
-    which tox
+There are a few scenarios where you want to run the test suite:
 
-   If you have trouble and are seeing weird errors upon running |tox|_, you can
-   also try to create a dedicated `virtual environment`_ with a |tox|_ binary
-   freshly installed. For example::
+#. You are getting your unit ready and want to test software is
+   installed correctly.
+#. You are upgrading to a new release of software (POCS, its
+   dependencies or the operating system).
+#. You are helping develop code for POCS and want test your code doesn't
+   break something.
 
-    virtualenv .venv
-    source .venv/bin/activate
-    .venv/bin/pip install tox
-    .venv/bin/tox -e all
+Testing your installation
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#. `Pytest can drop you`_ in an interactive session in the case an error occurs.
-   In order to do that you need to pass a ``--pdb`` option (for example by
-   running ``tox -- -k <NAME OF THE FALLING TEST> --pdb``).
-   You can also setup breakpoints manually instead of using the ``--pdb`` option.
+In order to test your installation you should have followed all of the steps above
+for getting your unit ready. To run the test suite, you will need to open a terminal
+and navigate to the ``$POCS`` directory.
 
+.. code-block:: bash
 
-Maintainer tasks
-================
+    cd $POCS
 
-Releases
---------
+    # Run the software testing
+    panoptes-develop test
 
-.. todo:: This section assumes you are using PyPI to publicly release your package.
+.. note::
 
-   If instead you are using a different/private package index, please update
-   the instructions accordingly.
+    The test suite will give you some warnings about what is going
+    on and give you a chance to cancel the tests (via ``Ctrl-c``).
 
-If you are part of the group of maintainers and have correct user permissions
-on PyPI_, the following steps can be used to release a new version for
-``panoptes-data``:
+It is often helpful to view the log output in another terminal window
+while the test suite is running:
 
-#. Make sure all unit tests are successful.
-#. Tag the current commit on the main branch with a release tag, e.g., ``v1.2.3``.
-#. Push the new tag to the upstream repository_, e.g., ``git push upstream v1.2.3``
-#. Clean up the ``dist`` and ``build`` folders with ``tox -e clean``
-   (or ``rm -rf dist build``)
-   to avoid confusion with old builds and Sphinx docs.
-#. Run ``tox -e build`` and check that the files in ``dist`` have
-   the correct version (no ``.dirty`` or git_ hash) according to the git_ tag.
-   Also check the sizes of the distributions, if they are too big (e.g., >
-   500KB), unwanted clutter may have been accidentally included.
-#. Run ``tox -e publish -- --repository pypi`` and check that everything was
-   uploaded to PyPI_ correctly.
+.. code-block:: bash
 
+    # Follow the log file
+    tail -F $PANDIR/logs/panoptes.log
 
+Testing your code changes
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. [#contrib1] Even though, these resources focus on open source projects and
-   communities, the general ideas behind collaborating with other developers
-   to collectively create software are general and can be applied to all sorts
-   of environments, including private companies and proprietary code bases.
+.. note::
 
+    This step is meant for people helping with software development.
 
-.. <-- strart -->
-.. todo:: Please review and change the following definitions:
+The testing suite will automatically be run against any code committed to our github
+repositories. However, the test suite should also be run locally before pushing
+to github. This can be done either by running the entire test suite as above or
+by running an individual test related to the code you are changing. For instance,
+to test the code related to the cameras one can run:
 
-.. |the repository service| replace:: GitHub
-.. |contribute button| replace:: "Create pull request"
+.. code-block:: bash
 
-.. _repository: https://github.com/<USERNAME>/panoptes-data
-.. _issue tracker: https://github.com/<USERNAME>/panoptes-data/issues
-.. <-- end -->
+    pytest -xv pocs/tests/test_camera.py
 
+Here the ``-x`` option will stop the tests upon the first failure and the ``-v`` makes
+the testing verbose.
+Note that some tests might require additional software. This software is
+installed in the docker image, which is used by the ``test-software.sh``
+script above), but is **not** used when calling ``pytest`` directly. For
+instance, anything requiring plate solving needs ``astrometry.net``
+installed.
 
-.. |virtualenv| replace:: ``virtualenv``
-.. |pre-commit| replace:: ``pre-commit``
-.. |tox| replace:: ``tox``
+Any new code should also include proper tests. See below for details.
 
+Writing tests
+^^^^^^^^^^^^^
 
-.. _black: https://pypi.org/project/black/
-.. _CommonMark: https://commonmark.org/
-.. _contribution-guide.org: https://www.contribution-guide.org/
-.. _creating a PR: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request
-.. _descriptive commit message: https://chris.beams.io/posts/git-commit
-.. _docstrings: https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html
-.. _first-contributions tutorial: https://github.com/firstcontributions/first-contributions
-.. _flake8: https://flake8.pycqa.org/en/stable/
-.. _git: https://git-scm.com
-.. _GitHub's fork and pull request workflow: https://guides.github.com/activities/forking/
-.. _guide created by FreeCodeCamp: https://github.com/FreeCodeCamp/how-to-contribute-to-open-source
-.. _Miniconda: https://docs.conda.io/en/latest/miniconda.html
-.. _MyST: https://myst-parser.readthedocs.io/en/latest/syntax/syntax.html
-.. _other kinds of contributions: https://opensource.guide/how-to-contribute
-.. _pre-commit: https://pre-commit.com/
-.. _PyPI: https://pypi.org/
-.. _PyScaffold's contributor's guide: https://pyscaffold.org/en/stable/contributing.html
-.. _Pytest can drop you: https://docs.pytest.org/en/stable/how-to/failures.html#using-python-library-pdb-with-pytest
-.. _Python Software Foundation's Code of Conduct: https://www.python.org/psf/conduct/
-.. _reStructuredText: https://www.sphinx-doc.org/en/master/usage/restructuredtext/
-.. _Sphinx: https://www.sphinx-doc.org/en/master/
-.. _tox: https://tox.wiki/en/stable/
-.. _virtual environment: https://realpython.com/python-virtual-environments-a-primer/
-.. _virtualenv: https://virtualenv.pypa.io/en/stable/
+All code changes should include tests. We strive to maintain a high code coverage
+and new code should necessarily maintain or increase code coverage.
+For more details see the `Writing
+Tests <https://github.com/panoptes/POCS/wiki/Writing-Tests-for-POCS>`__
+page.
 
-.. _GitHub web interface: https://docs.github.com/en/repositories/working-with-files/managing-files/editing-files
-.. _GitHub's code editor: https://docs.github.com/en/repositories/working-with-files/managing-files/editing-files
+Hardware Testing
+~~~~~~~~~~~~~~~~
+
+Hardware testing uses the same testing suite as the software testing but with
+additional options passed on the command line to signify what hardware should be
+tested.
+
+The options to pass to ``pytest`` is ``--with-hardware``, which accepts a list of
+possible hardware items that are connected. This list includes ``camera``, ``mount``,
+and ``weather``. Optionally you can use ``all`` to test a fully connected unit.
+
+.. warning::
+
+    The hardware tests do not perform safety checking of the weather or
+    dark sky. The ``weather`` test mentioned above tests if a weather station is
+    connected but does not test the safety conditions. It is assumed that hardware
+    testing is always done with direct supervision.
+
+.. code-block:: bash
+
+    # Test an attached camera
+    pytest --with-hardware=camera
+
+    # Test an attached camera and mount
+    pytest --with-hardware=camera,mount
+
+    # Test a fully connected unit
+    pytest --with-hardware=all

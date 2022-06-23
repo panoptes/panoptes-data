@@ -2,9 +2,8 @@
 Changelog
 =========
 
-Version 0.1
-===========
+Version 0.0.1
+=============
 
-- Feature A added
-- FIX: nasty bug #1729 fixed
-- add your changes here!
+- Observation search available via `panoptes.data.search.search_observations`.
+- `ObservationInfo` for working with observation data and metadata.
