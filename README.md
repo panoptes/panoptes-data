@@ -12,7 +12,9 @@ pip install panoptes-data
 
 ## Examples
 
-> :bulb: See example Jupyter Notebooks in the [`notebooks`](notebooks/) folder.
+> See example Jupyter Notebooks in the [`notebooks`](notebooks/) folder.
+
+### Finding observations
 
 ```py
 >>> from panoptes.data.search import search_observations
@@ -46,4 +48,12 @@ Name: 6121, dtype: object
 >>> obs_info.meta
 
 {}
+```
+
+### Downloading images
+
+The `ObservationInfo` object makes it easy to download the files:
+
+```py
+>>> obs_info.download_images()
 ```
