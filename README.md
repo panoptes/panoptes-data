@@ -57,3 +57,12 @@ The `ObservationInfo` object makes it easy to download the files:
 ```py
 >>> obs_info.download_images()
 ```
+
+### Command-line tools
+
+There is a simple command line tool that allows for downloading of images and metadata
+given a valid `sequence_id`.
+
+```bash
+panoptes-data download --sequence_id PAN001_14d3bd_20180113T052325 --output-dir 'temp_dir'
+```
