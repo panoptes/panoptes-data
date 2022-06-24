@@ -3,12 +3,12 @@ channels:
   - https://conda.anaconda.org/conda-forge
 dependencies:
   - astropy
-  - google-cloud-storage
   - numpy
   - pandas
   - pip
   - pydantic
   - python-dateutil
   - tqdm
+  - typer
   - pip:
       - "git+https://github.com/panoptes/panoptes-utils@develop#egg=panoptes-utils"
