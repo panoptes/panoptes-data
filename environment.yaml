@@ -11,4 +11,5 @@ dependencies:
   - tqdm
   - typer
   - pip:
+      - -e .
       - "git+https://github.com/panoptes/panoptes-utils@develop#egg=panoptes-utils"
