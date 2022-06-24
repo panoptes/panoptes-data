@@ -2,6 +2,13 @@
 Changelog
 =========
 
+Version 0.0.3
+=============
+
+- ADDED basic cli interface for download images and metadata for observations.
+- FIXED install dependencies.
+
+
 
 Version 0.0.2
 =============
