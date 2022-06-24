@@ -223,7 +223,7 @@ class ObservationInfo:
 
         img_paths = list()
         for img in img_iter:
-            fn = Path(download_file(img))
+            fn = Path(download_file(img, show_progress=False))
             new_fn = output_dir / Path(img).name
             shutil.move(fn, new_fn)
             img_paths.append(str(new_fn))

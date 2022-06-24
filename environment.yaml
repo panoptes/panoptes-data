@@ -3,6 +3,7 @@ channels:
   - https://conda.anaconda.org/conda-forge
 dependencies:
   - astropy
+  - google-cloud-storage
   - numpy
   - pandas
   - pip
