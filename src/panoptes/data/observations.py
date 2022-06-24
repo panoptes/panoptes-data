@@ -18,8 +18,6 @@ from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.time import flatten_time
 from panoptes.data.settings import PATH_MATCHER, CloudSettings
 
-logger = getLogger()
-
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
 
@@ -186,8 +184,6 @@ class ObservationInfo:
         # Set a time index.
         images_df.time = pd.to_datetime(images_df.time)
         images_df = images_df.set_index(['time']).sort_index()
-
-        print(f'Found {len(images_df)} images in observation')
 
         return images_df
 
