@@ -228,7 +228,8 @@ class ObservationInfo:
 
         return image_list
 
-    def download_images(self, image_list=None, output_dir=None, show_progress=True):
+    def download_images(self, image_list=None, output_dir=None, show_progress=True,
+                        continue_on_error=True):
         """Download the images to the output directory (named after the sequence_id) by default."""
         output_dir = Path(output_dir or self.sequence_id)
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -242,10 +243,14 @@ class ObservationInfo:
 
         img_paths = list()
         for img in img_iter:
-            fn = Path(download_file(img, show_progress=False))
-            new_fn = output_dir / Path(img).name
-            shutil.move(fn, new_fn)
-            img_paths.append(str(new_fn))
+            try:
+                fn = Path(download_file(img, show_progress=False))
+                new_fn = output_dir / Path(img).name
+                shutil.move(fn, new_fn)
+                img_paths.append(str(new_fn))
+            except Exception as e:
+                if not continue_on_error:
+                    raise e
 
         return img_paths
 
