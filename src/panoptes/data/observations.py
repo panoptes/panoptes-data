@@ -229,8 +229,16 @@ class ObservationInfo:
         return image_list
 
     def download_images(self, image_list=None, output_dir=None, show_progress=True,
-                        continue_on_error=True):
-        """Download the images to the output directory (named after the sequence_id) by default."""
+                        warn_on_error=True):
+        """Download the images to the output directory (by default named after the sequence_id).
+
+        Args:
+            image_list: A list of images to download.
+            output_dir: The directory to download the images to.
+            show_progress: Whether to show a progress bar.
+            warn_on_error: If True (default) issue a warning if an image fails to download,
+                otherwise raise an exception.
+        """
         output_dir = Path(output_dir or self.sequence_id)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -249,7 +257,9 @@ class ObservationInfo:
                 shutil.move(fn, new_fn)
                 img_paths.append(str(new_fn))
             except Exception as e:
-                if not continue_on_error:
+                if warn_on_error:
+                    warnings.warn(f'Failed to download {img}: {e}')
+                else:
                     raise e
 
         return img_paths
