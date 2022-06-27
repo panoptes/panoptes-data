@@ -9,15 +9,20 @@ app = typer.Typer()
 
 
 @app.command()
-def download(sequence_id: Union[str, None] = typer.Option(None, '--sequence-id', '-s',
+def download(sequence_id: Union[str, None] = typer.Option(None,
+                                                          '--sequence-id', '-s',
                                                           help='Sequence ID for the Observation.'),
-             output_dir: Path = typer.Option(Path('.'), '--output-dir', '-o',
+             output_dir: Path = typer.Option(Path('.'),
+                                             '--output-dir', '-o',
                                              help='Output directory for images.'),
+             image_query: str = typer.Option('status!="ERROR"',
+                                             '--image-query', '-q',
+                                             help='Query for images, default \'status!="ERROR"\''),
              ) -> List[str]:
     """Downloads all FITS images for the observation."""
     local_files = list()
     try:
-        obs_info = ObservationInfo(sequence_id=sequence_id)
+        obs_info = ObservationInfo(sequence_id=sequence_id, image_query=image_query)
         local_files = obs_info.download_images(output_dir=output_dir)
         typer.secho(f'Downloaded {len(local_files)} images to {output_dir}.')
 
