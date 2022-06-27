@@ -141,8 +141,28 @@ class ObservationPathInfo:
 class ObservationInfo:
     """A container class for information about an Observation."""
 
-    def __init__(self, sequence_id=None, meta=None):
-        """Initialize the observation info with a sequence_id"""
+    def __init__(self, sequence_id=None, meta=None, image_query=''):
+        """Initialize the observation info with a sequence_id.
+
+        This object will be populated with information about the observation, including
+        image metadata and links to raw and processed images. It is mostly a convenience
+        class for accessing information about an observation.
+
+        Example:
+
+            >>> from panoptes.data.observations import ObservationInfo
+            >>> obs_info = ObservationInfo(sequence_id='PAN012_358d0f_20180824T035917')
+            >>> obs_info.sequence_id
+            'PAN012_358d0f_20180824T035917'
+            >>> len(obs_info.raw_images)
+            124
+
+
+        Args:
+            sequence_id: The sequence id of the observation.
+            meta: A dictionary of metadata for the observation.
+            image_query: A query string to use when querying for images, e.g. 'status != "ERROR"'
+        """
         self._settings = CloudSettings()
 
         if meta is not None:
@@ -152,7 +172,7 @@ class ObservationInfo:
             self.sequence_id = sequence_id
             self.meta = dict()
 
-        self.image_metadata = self.get_metadata()
+        self.image_metadata = self.get_metadata(query=image_query)
         self.raw_images = self.get_image_list()
         self.processed_images = self.get_image_list(raw=False)
 
@@ -177,13 +197,16 @@ class ObservationInfo:
 
         return ccd0
 
-    def get_metadata(self):
+    def get_metadata(self, query=''):
         """Download the image metadata associated with the observation."""
         images_df = pd.read_csv(f'{self._settings.img_metadata_url}?sequence_id={self.sequence_id}')
 
         # Set a time index.
         images_df.time = pd.to_datetime(images_df.time)
         images_df = images_df.set_index(['time']).sort_index()
+
+        if query > '':
+            images_df = images_df.query(query)
 
         return images_df
 
