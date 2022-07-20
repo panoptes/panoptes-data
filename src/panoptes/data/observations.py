@@ -2,7 +2,6 @@ import shutil
 import warnings
 from dataclasses import dataclass
 from datetime import datetime
-from logging import getLogger
 from pathlib import Path
 from typing import Union
 
@@ -258,7 +257,7 @@ class ObservationInfo:
                 img_paths.append(str(new_fn))
             except Exception as e:
                 if warn_on_error:
-                    warnings.warn(f'Failed to download {img}: {e}')
+                    print(f'Failed to download {img}: {e}')
                 else:
                     raise e
 
