@@ -14,3 +14,6 @@ except PackageNotFoundError:  # pragma: no cover
     __version__ = "unknown"
 finally:
     del version, PackageNotFoundError
+
+from panoptes.data.images import ImagePathInfo
+from panoptes.data.observations import ObservationInfo
