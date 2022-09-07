@@ -157,7 +157,7 @@ def search_observations(
     obs_df.sort_values(by=['time'], inplace=True)
 
     # Make sure we show an average exptime.
-    obs_df.exptime = obs_df.total_exptime / obs_df.num_images
+    obs_df['exptime'] = obs_df.total_exptime / obs_df.num_images
 
     # Fix bad names and drop useless columns.
     obs_df = obs_df.rename(columns=dict(camera_camera_id='camera_id'))
