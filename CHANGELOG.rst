@@ -2,8 +2,15 @@
 Changelog
 =========
 
+Version 0.0.6dev
+================
+
+- Fix ``search_observations`` so it ignores ``status`` column by default.
+
+
 Version 0.0.5
 =============
+
 - Allow for query of image metadata before download.
 - Handle image download exceptions better.
 
