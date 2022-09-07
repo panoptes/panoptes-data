@@ -25,7 +25,7 @@ def search_observations(
         ra=None,
         dec=None,
         radius=10,  # degrees
-        status='CREATED',
+        status=None,
         min_num_images=1,
         source=None,
         ra_col='coordinates_mount_ra',
@@ -161,7 +161,7 @@ def search_observations(
 
     # Fix bad names and drop useless columns.
     obs_df = obs_df.rename(columns=dict(camera_camera_id='camera_id'))
-    obs_df = obs_df.drop(columns=['received_time', 'urls', 'status'])
+    obs_df = obs_df.drop(columns=['received_time', 'urls', 'status'], errors='ignore')
 
     obs_df.time = pd.to_datetime(obs_df.time)
 
