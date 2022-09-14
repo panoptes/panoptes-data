@@ -2,15 +2,17 @@ import shutil
 import warnings
 from dataclasses import dataclass
 from datetime import datetime
-from logging import getLogger
 from pathlib import Path
 from typing import Union
 
+import numpy as np
 import pandas as pd
+from astropy.coordinates import EarthLocation, SkyCoord, HADec
 from astropy.nddata import Cutout2D, CCDData
 from astropy.time import Time
 from astropy.utils.data import download_file
 from astropy.wcs import FITSFixedWarning
+from astropy import units as u
 from dateutil.parser import parse as parse_date
 from tqdm.auto import tqdm
 
@@ -58,12 +60,12 @@ class ObservationPathInfo:
 
 
     """
+    path: Union[str, Path] = None
     unit_id: str = None
     camera_id: str = None
     field_name: str = None
     sequence_time: Union[str, datetime, Time] = None
     image_time: Union[str, datetime, Time] = None
-    path: Union[str, Path] = None
 
     def __post_init__(self):
         """Parse the path when provided upon initialization."""
@@ -208,6 +210,9 @@ class ObservationInfo:
         if query > '':
             images_df = images_df.query(query)
 
+        # Merge the drift data.
+        images_df = self.get_drift(images_df)
+
         return images_df
 
     def get_image_list(self, raw=True):
@@ -227,6 +232,73 @@ class ObservationInfo:
                       self.image_metadata.uid.values]
 
         return image_list
+
+    def get_drift(self, images, sidereal_rate=15.04, rename_columns=False, *args, **kwargs):
+        """Get the drift of the observation."""
+        images = images.reset_index()
+
+        lat = images.location_latitude.iloc[0]
+        lon = images.location_longitude.iloc[0]
+        elevation = images.location_elevation.iloc[0]
+
+        location = EarthLocation(lat=lat, lon=lon, height=elevation * u.meter)
+
+        # Get conversions.
+        delta_seconds = images.time.diff().dt.seconds
+
+        # Get HA from skycoord transform.
+        coords = SkyCoord(
+            ra=images.coordinates_ra,
+            dec=images.coordinates_dec,
+            unit='deg',
+            obstime=images.time,
+            location=location,
+        ).transform_to(HADec)
+
+        images['ha'] = coords.ha.deg
+        images['dec'] = coords.dec.deg
+
+        images['delta_seconds'] = delta_seconds
+        images['delta_ha_arcsec'] = (images.ha.diff().values * u.degree).to(u.arcsec).value
+        images['delta_ra_arcsec'] = (images.coordinates_ra.diff().values * u.degree).to(
+            u.arcsec).value
+        images['delta_dec_arcsec'] = (images.coordinates_dec.diff().values * u.degree).to(
+            u.arcsec).value
+
+        # Get drift rates.
+        images['ha_drift_arcsec_per_sec'] = \
+            (images.delta_ha_arcsec / delta_seconds) - (sidereal_rate * u.arcsec / u.second)
+        images['ra_drift_arcsec_per_sec'] = \
+            (images.delta_ra_arcsec / delta_seconds) * np.cos(np.deg2rad(images.coordinates_dec))
+        images['dec_drift_arcsec_per_sec'] = \
+            images.delta_dec_arcsec / delta_seconds
+
+        # Get columns
+        columns = [
+            'time',
+            'delta_seconds', 'delta_ha_arcsec', 'delta_ra_arcsec', 'delta_dec_arcsec',
+            # 'ha', 'dec',
+            # 'coordinates_ra',
+            # 'coordinates_dec',
+            'ha_drift_arcsec_per_sec',
+            'ra_drift_arcsec_per_sec',
+            'dec_drift_arcsec_per_sec',
+            # 'status'
+        ]
+
+        # drifts = images[columns]
+
+        if rename_columns is True:
+            images = images.rename(columns=dict(
+                ha='HA (deg)',
+                coordinates_ra='ra (deg)',
+                coordinates_dec='dec (deg)',
+                ha_drift_arcsec_per_sec='HA_drift_rate (arcsec/sec)',
+                ra_drift_arcsec_per_sec='RA_drift_rate (arcsec/sec)',
+                dec_drift_arcsec_per_sec='Dec_drift_rate (arcsec/sec)',
+            ))
+
+        return images.dropna()
 
     def download_images(self, image_list=None, output_dir=None, show_progress=True,
                         warn_on_error=True):
