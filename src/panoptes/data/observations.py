@@ -58,12 +58,12 @@ class ObservationPathInfo:
 
 
     """
+    path: Union[str, Path] = None
     unit_id: str = None
     camera_id: str = None
     field_name: str = None
     sequence_time: Union[str, datetime, Time] = None
     image_time: Union[str, datetime, Time] = None
-    path: Union[str, Path] = None
 
     def __post_init__(self):
         """Parse the path when provided upon initialization."""
