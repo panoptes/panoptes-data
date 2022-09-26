@@ -228,7 +228,6 @@ class ObservationInfo:
 
         return image_list
 
-
     def download_images(self, image_list=None, output_dir=None, show_progress=True,
                         warn_on_error=True):
         """Download the images to the output directory (by default named after the sequence_id).
