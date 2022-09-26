@@ -71,7 +71,7 @@ panoptes-data download --sequence_id PAN001_14d3bd_20180113T052325
 #### Get all metadata for a unit in a given date range:
 
 ```bash
-panoptes-data get-metadata --unit_id PAN001 --start-date 2022-09-01
+panoptes-data get-metadata --unit_id PAN001 --start-date '2022-09-01'
 ```
 
 See `panoptes-data --help` for more options.
