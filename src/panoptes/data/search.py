@@ -147,7 +147,7 @@ def search_observations(
         obs_df.query(f'unit_id in {listify(unit_ids)}', inplace=True)
     logger.debug(f'Found {len(obs_df)} observations after unit filter')
 
-    with suppress(KeyError):
+    with suppress(Exception):
         obs_df.query(f'status in {listify(status)}', inplace=True)
         logger.debug(f'Found {len(obs_df)} observations after status filter')
 

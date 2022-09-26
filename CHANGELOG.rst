@@ -5,6 +5,7 @@ Changelog
 Version 0.0.6
 =============
 
+- Added ability to download metadata for a unit for a range of data via cli.
 - Fix ``search_observations`` so it ignores ``status`` column by default.
 
 

@@ -60,9 +60,18 @@ The `ObservationInfo` object makes it easy to download the files:
 
 ### Command-line tools
 
-There is a simple command line tool that allows for downloading of images and metadata
-given a valid `sequence_id`.
+There is a simple command line tool that allows for downloading of images and metadata.
+
+#### Downloading all images for an observation:
 
 ```bash
-panoptes-data download --sequence_id PAN001_14d3bd_20180113T052325 --output-dir 'temp_dir'
+panoptes-data download --sequence_id PAN001_14d3bd_20180113T052325
 ```
+
+#### Get all metadata for a unit in a given date range:
+
+```bash
+panoptes-data get-metadata --unit_id PAN001 --start-date 2022-09-01
+```
+
+See `panoptes-data --help` for more options.
