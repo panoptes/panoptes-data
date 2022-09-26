@@ -2,8 +2,8 @@
 Changelog
 =========
 
-Version 0.0.6dev
-================
+Version 0.0.6
+=============
 
 - Fix ``search_observations`` so it ignores ``status`` column by default.
 
