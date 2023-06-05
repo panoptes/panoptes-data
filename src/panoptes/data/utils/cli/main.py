@@ -3,6 +3,9 @@ from typing import List, Union
 
 import pandas as pd
 import typer
+from rich.console import Console
+from rich.markdown import Markdown
+from rich import print
 from astropy.time import Time
 from tqdm import tqdm
 
@@ -14,25 +17,27 @@ app = typer.Typer()
 
 
 @app.command()
-def download(sequence_id: Union[str, None] = typer.Option(None,
-                                                          '--sequence-id', '-s',
-                                                          help='Sequence ID for the Observation.'),
-             output_dir: Path = typer.Option(Path('.'),
+def download(sequence_id: Union[str, None] = typer.Argument(..., help='Sequence ID for the Observation.'),
+             output_dir: Path = typer.Option(None,
                                              '--output-dir', '-o',
-                                             help='Output directory for images.'),
+                                             help='Output directory for images, defaults to sequence_id.'),
              image_query: str = typer.Option('status!="ERROR"',
                                              '--image-query', '-q',
                                              help='Query for images, default \'status!="ERROR"\''),
              ) -> List[str]:
     """Downloads all FITS images for the observation."""
     local_files = list()
+
+    if output_dir is None:
+        output_dir = Path(sequence_id)
+
     try:
         obs_info = ObservationInfo(sequence_id=sequence_id, image_query=image_query)
         local_files = obs_info.download_images(output_dir=output_dir)
-        typer.secho(f'Downloaded {len(local_files)} images to {output_dir}.')
+        print(f'Downloaded {len(local_files)} images to {output_dir}.')
 
     except Exception:
-        typer.secho(f'Error downloading images for {sequence_id}', fg='red')
+        print(f'[red]Error downloading images for {sequence_id}')
 
     return local_files
 
@@ -65,16 +70,16 @@ def get_metadata(
         try:
             obs_info = ObservationInfo(sequence_id=sequence_id)
             obs_info.image_metadata.to_csv(output_fn)
-            typer.secho(f'Metadata saved to {output_fn}', fg='green')
+            print(f'[green]Metadata saved to {output_fn}')
         except Exception:
-            typer.secho(f'Error downloading metadata for {sequence_id}', fg='red')
+            print(f'[red]Error downloading metadata for {sequence_id}')
     else:
         if unit_id is None:
-            typer.secho('Must provide a unit_id if not providing a sequence_id.', fg='red')
+            print('[red]Must provide a unit_id if not providing a sequence_id.')
             return
 
         if start_date is None:
-            typer.secho('Must provide a start_date if not providing a sequence_id.', fg='red')
+            print('[red]Must provide a start_date if not providing a sequence_id.')
             return
         else:
             start_date = flatten_time(Time(start_date))[:8]
@@ -101,9 +106,51 @@ def get_metadata(
             pd.concat(dfs).to_csv(output_fn)
 
         except ValueError as e:
-            typer.secho(f'Error downloading metadata for {unit_id}: {e}', fg='red')
+            print(f'Error downloading metadata for {unit_id}: {e}', fg='red')
 
     return output_fn
+
+
+@app.command()
+def search(
+        name: str = typer.Option(None, '--name', '-n',
+                                 help='Name of object to search for.'),
+        unit_id: str = typer.Option(None, '--unit-id', '-u',
+                                    help='Unit ID for the Observation.'),
+        start_date: str = typer.Option(None, '--start-date', '-s',
+                                       help='Start date for downloading metadata in '
+                                            'form YYYY-MM-DD'),
+        end_date: str = typer.Option(None, '--end-date', '-s',
+                                     help='End date for downloading metadata, '
+                                          'defaults to now.'),
+        ra: float = typer.Option(None, '--ra', '-r',
+                                 help='RA in degrees for search.'),
+        dec: float = typer.Option(None, '--dec', '-d',
+                                  help='Dec in degrees for search.'),
+        radius: int = typer.Option(10, '--radius', '-r',
+                                   help='Radius in degrees for search.'),
+        min_num_images: int = typer.Option(1, '--min-num-images', '-m',
+                                           help='Minimum number of images.'),
+
+):
+    """Search for observations."""
+    results = search_observations(unit_id=unit_id,
+                                  start_date=start_date,
+                                  end_date=end_date,
+                                  by_name=name,
+                                  ra=ra,
+                                  dec=dec,
+                                  min_num_images=min_num_images,
+                                  radius=radius)
+
+    if len(results) == 0:
+        print('[red]No results found.')
+        return
+
+    display_cols = ['field_name', 'unit_id', 'coordinates_mount_ra', 'coordinates_mount_dec', 'num_images', 'exptime',
+                    'total_exptime', 'time']
+    markdown_table = results.set_index('sequence_id')[display_cols].to_markdown()
+    print(markdown_table)
 
 
 if __name__ == "__main__":
