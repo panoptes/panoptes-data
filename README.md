@@ -60,18 +60,33 @@ The `ObservationInfo` object makes it easy to download the files:
 
 ### Command-line tools
 
-There is a simple command line tool that allows for downloading of images and metadata.
+There is a simple command line tool that allows for both searching and downloading of images and metadata.
+
+#### Search for observations:
+
+```bash
+$ panoptes-data search --name M42 --min-num-images 90
+
+| sequence_id                   | field_name   | unit_id   |   coordinates_mount_ra |   coordinates_mount_dec |   num_images |   exptime |   total_exptime | time                      |
+|:------------------------------|:-------------|:----------|-----------------------:|------------------------:|-------------:|----------:|----------------:|:--------------------------|
+| PAN022_977c86_20220108T090553 | M42          | PAN022    |                83.8221 |                -5.39111 |           95 |   90      |            8550 | 2022-01-08 09:05:53+00:00 |
+| PAN022_538cc6_20220108T090553 | M42          | PAN022    |                83.8221 |                -5.39111 |           95 |   89      |            8455 | 2022-01-08 09:05:53+00:00 |
+| PAN019_42433a_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   90      |            8100 | 2022-01-14 08:57:22+00:00 |
+| PAN019_c623e9_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   89.0222 |            8012 | 2022-01-14 08:57:22+00:00 |
+| PAN019_c623e9_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   89.019  |            9347 | 2022-01-15 08:21:08+00:00 |
+| PAN019_42433a_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   90.0095 |            9451 | 2022-01-15 08:21:08+00:00 |
+```
 
 #### Downloading all images for an observation:
 
 ```bash
-panoptes-data download --sequence_id PAN001_14d3bd_20180113T052325
+panoptes-data download --sequence-id PAN022_977c86_20220108T090553
 ```
 
 #### Get all metadata for a unit in a given date range:
 
 ```bash
-panoptes-data get-metadata --unit_id PAN001 --start-date '2022-09-01'
+panoptes-data get-metadata --unit-id PAN022 --start-date '2022-01-08'
 ```
 
 See `panoptes-data --help` for more options.
