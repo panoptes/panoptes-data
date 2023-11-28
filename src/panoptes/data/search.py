@@ -118,7 +118,7 @@ def search_observations(
     # Get the observation list
     obs_df = source
     if obs_df is None:
-        local_path = download_file(settings.observations_url,
+        local_path = download_file(settings.observations_url.unicode_string(),
                                    cache='update',
                                    show_progress=False,
                                    pkgname='panoptes')

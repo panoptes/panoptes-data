@@ -174,7 +174,7 @@ class ObservationInfo:
 
         self.image_metadata = self.get_metadata(query=image_query)
         self.raw_images = self.get_image_list()
-        self.processed_images = self.get_image_list(raw=False)
+        self.processed_images = self.get_image_list()
 
     def get_image_cutout(self, data=None, coords=None, box_size=None, *args, **kwargs):
         """Gets a Cutout2D object for the given coords and box_size."""
@@ -199,7 +199,7 @@ class ObservationInfo:
 
     def get_metadata(self, query=''):
         """Download the image metadata associated with the observation."""
-        images_df = pd.read_csv(f'{self._settings.img_metadata_url}?sequence_id={self.sequence_id}')
+        images_df = pd.read_csv(f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}')
 
         # Set a time index.
         images_df.time = pd.to_datetime(images_df.time)
@@ -210,17 +210,13 @@ class ObservationInfo:
 
         return images_df
 
-    def get_image_list(self, raw=True):
+    def get_image_list(self):
         """Get the images for the observation."""
-        if raw:
-            bucket = 'panoptes-images-raw'
-            file_ext = '.fits.fz'
-        else:
-            bucket = 'panoptes-images-processed'
-            file_ext = '-reduced.fits.fz'
+        bucket = 'panoptes-images'
+        file_ext = '.fits.fz'
 
         # Build up the image list from the metadata.
-        image_list = [self._settings.img_base_url + '/'
+        image_list = [self._settings.img_base_url.unicode_string()
                       + bucket + '/'
                       + str(s).replace("_", "/")
                       + file_ext for s in
