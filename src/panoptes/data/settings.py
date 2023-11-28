@@ -1,7 +1,7 @@
 import re
 from typing import Pattern
 
-from pydantic import BaseSettings, AnyHttpUrl
+from pydantic_settings import BaseSettings, AnyHttpUrl
 
 
 class CloudSettings(BaseSettings):

@@ -6,7 +6,8 @@ dependencies:
   - numpy
   - pandas
   - pip
-  - pydantic==1.*
+  - pydantic
+  - pydantic-settings
   - python-dateutil
   - tqdm
   - typer
