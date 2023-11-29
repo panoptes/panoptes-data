@@ -1,3 +1,5 @@
+[![Documentation Status](https://readthedocs.org/projects/panoptes-data/badge/?version=latest)](https://panoptes-data.readthedocs.io/en/latest/?badge=latest)
+
 # PANOPTES Data tools
 
 Tools for searching and downloading PANOPTES data.
