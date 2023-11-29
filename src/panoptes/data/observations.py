@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import numpy as np
 import pandas as pd
 from astropy.nddata import Cutout2D, CCDData
 from astropy.time import Time
@@ -174,7 +173,6 @@ class ObservationInfo:
 
         self.image_metadata = self.get_metadata(query=image_query)
         self.raw_images = self.get_image_list()
-        self.processed_images = self.get_image_list()
 
     def get_image_cutout(self, data=None, coords=None, box_size=None, *args, **kwargs):
         """Gets a Cutout2D object for the given coords and box_size."""
@@ -183,13 +181,10 @@ class ObservationInfo:
 
     def get_image_data(self, idx=0, use_raw=True):
         """Downloads the image data for the given index."""
-        if use_raw:
-            image_list = self.raw_images
-        else:
-            image_list = self.processed_images
+        image_list = self.raw_images
 
         data_img = image_list[idx]
-        wcs_img = self.processed_images[idx]
+        wcs_img = image_list[idx]
 
         data0, header0 = fits_utils.getdata(data_img, header=True)
         wcs0 = fits_utils.getwcs(wcs_img)
@@ -199,7 +194,9 @@ class ObservationInfo:
 
     def get_metadata(self, query=''):
         """Download the image metadata associated with the observation."""
-        images_df = pd.read_csv(f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}')
+        metadata_url = f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}'
+        print(f'Getting metadata from {metadata_url}')
+        images_df = pd.read_csv(metadata_url)
 
         # Set a time index.
         images_df.time = pd.to_datetime(images_df.time)
@@ -239,6 +236,7 @@ class ObservationInfo:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         image_list = image_list or self.raw_images
+        print(f'Downloading {len(image_list)} images to {output_dir}')
 
         if show_progress:
             img_iter = tqdm(image_list)
@@ -247,6 +245,11 @@ class ObservationInfo:
 
         img_paths = list()
         for img in img_iter:
+            if show_progress:
+                img_iter.set_description(f'Downloading {img}')
+            else:
+                print(f'Downloading {img}')
+
             try:
                 fn = Path(download_file(img, show_progress=False))
                 new_fn = output_dir / Path(img).name
