@@ -1,6 +1,6 @@
 # PANOPTES Data tools
 
-Tools for working with PANOPTES data.
+Tools for searching and downloading PANOPTES data.
 
 ## Install
 
