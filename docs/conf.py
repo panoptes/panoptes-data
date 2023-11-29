@@ -43,7 +43,7 @@ except FileNotFoundError:
 try:
     import sphinx
 
-    cmd_line = f"sphinx-apidoc --implicit-namespaces -f -o {output_dir} {module_dir}"
+    cmd_line = f"sphinx-apidoc --implicit-namespaces -d 4 -f -o {output_dir} {module_dir}"
 
     args = cmd_line.split(" ")
     if tuple(sphinx.__version__.split(".")) >= ("1", "7"):
@@ -184,7 +184,7 @@ html_theme_options = {
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = f"{project} v{version}"
+html_title = f"{project}"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 html_short_title = f"{project}"
