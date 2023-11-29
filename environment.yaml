@@ -9,6 +9,8 @@ dependencies:
   - pydantic
   - pydantic-settings
   - python-dateutil
+  - rich[jupyter]
+  - tabulate
   - tqdm
   - typer
   - pip:
