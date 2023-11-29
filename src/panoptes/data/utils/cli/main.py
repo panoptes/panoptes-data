@@ -98,16 +98,19 @@ def get_metadata(
                                              radius=290)
 
             dfs = list()
-            for idx, rec in tqdm(results_df.iterrows(), total=len(results_df)):
+            for idx, rec in (pbar := tqdm(results_df.iterrows(), total=len(results_df))):
                 try:
+                    pbar.set_description(f'Getting metadata for {rec["sequence_id"]}')
                     dfs.append(ObservationInfo(meta=rec).image_metadata)
                 except Exception as e:
-                    tqdm.write(f'Error in {idx} {rec["sequence_id"]}')
+                    pbar.write(f'Error in {idx} {rec["sequence_id"]}')
 
             pd.concat(dfs).to_csv(output_fn)
 
         except ValueError as e:
             print(f'Error downloading metadata for {unit_id}: {e}', fg='red')
+
+    print(f'Metadata saved to [green]{output_fn}')
 
     return output_fn
 

@@ -153,7 +153,7 @@ class ObservationInfo:
             >>> obs_info = ObservationInfo(sequence_id='PAN012_358d0f_20180824T035917')
             >>> obs_info.sequence_id
             'PAN012_358d0f_20180824T035917'
-            >>> len(obs_info.raw_images)
+            >>> len(obs_info.image_list)
             124
 
 
@@ -172,7 +172,7 @@ class ObservationInfo:
             self.meta = dict()
 
         self.image_metadata = self.get_metadata(query=image_query)
-        self.raw_images = self.get_image_list()
+        self.image_list = self.get_image_list()
 
     def get_image_cutout(self, data=None, coords=None, box_size=None, *args, **kwargs):
         """Gets a Cutout2D object for the given coords and box_size."""
@@ -181,10 +181,8 @@ class ObservationInfo:
 
     def get_image_data(self, idx=0, use_raw=True):
         """Downloads the image data for the given index."""
-        image_list = self.raw_images
-
-        data_img = image_list[idx]
-        wcs_img = image_list[idx]
+        data_img = self.image_list[idx]
+        wcs_img = self.image_list[idx]
 
         data0, header0 = fits_utils.getdata(data_img, header=True)
         wcs0 = fits_utils.getwcs(wcs_img)
@@ -195,7 +193,6 @@ class ObservationInfo:
     def get_metadata(self, query=''):
         """Download the image metadata associated with the observation."""
         metadata_url = f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}'
-        print(f'Getting metadata from {metadata_url}')
         images_df = pd.read_csv(metadata_url)
 
         # Set a time index.
@@ -235,7 +232,7 @@ class ObservationInfo:
         output_dir = Path(output_dir or self.sequence_id)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        image_list = image_list or self.raw_images
+        image_list = image_list or self.image_list
         print(f'Downloading {len(image_list)} images to {output_dir}')
 
         if show_progress:
@@ -264,7 +261,7 @@ class ObservationInfo:
         return img_paths
 
     def __str__(self):
-        return f'Obs: seq_id={self.sequence_id} num_images={len(self.raw_images)}'
+        return f'Obs: seq_id={self.sequence_id} num_images={len(self.image_list)}'
 
     def __repr__(self):
         return str(self)
