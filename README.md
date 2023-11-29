@@ -80,7 +80,7 @@ $ panoptes-data search --name M42 --min-num-images 90
 #### Downloading all images for an observation:
 
 ```bash
-panoptes-data download --sequence-id PAN022_977c86_20220108T090553
+panoptes-data download PAN022_977c86_20220108T090553
 ```
 
 #### Get all metadata for a unit in a given date range:

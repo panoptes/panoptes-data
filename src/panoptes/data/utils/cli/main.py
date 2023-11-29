@@ -3,15 +3,13 @@ from typing import List, Union
 
 import pandas as pd
 import typer
-from rich.console import Console
-from rich.markdown import Markdown
-from rich import print
 from astropy.time import Time
+from panoptes.utils.time import current_time, flatten_time
+from rich import print
 from tqdm import tqdm
 
 from panoptes.data.observations import ObservationInfo
 from panoptes.data.search import search_observations
-from panoptes.utils.time import current_time, flatten_time
 
 app = typer.Typer()
 
@@ -31,13 +29,16 @@ def download(sequence_id: Union[str, None] = typer.Argument(..., help='Sequence 
     if output_dir is None:
         output_dir = Path(sequence_id)
 
+    print(f'Downloading images for {sequence_id} to {output_dir}.')
+
     try:
         obs_info = ObservationInfo(sequence_id=sequence_id, image_query=image_query)
+        print(f'Found {len(obs_info.image_metadata)} images for {sequence_id}.')
         local_files = obs_info.download_images(output_dir=output_dir)
         print(f'Downloaded {len(local_files)} images to {output_dir}.')
 
-    except Exception:
-        print(f'[red]Error downloading images for {sequence_id}')
+    except Exception as e:
+        print(f'[red]Error downloading images for {sequence_id}: {e}')
 
     return local_files
 
@@ -71,8 +72,8 @@ def get_metadata(
             obs_info = ObservationInfo(sequence_id=sequence_id)
             obs_info.image_metadata.to_csv(output_fn)
             print(f'[green]Metadata saved to {output_fn}')
-        except Exception:
-            print(f'[red]Error downloading metadata for {sequence_id}')
+        except Exception as e:
+            print(f'[red]Error downloading metadata for {sequence_id}: {e}')
     else:
         if unit_id is None:
             print('[red]Must provide a unit_id if not providing a sequence_id.')
@@ -97,16 +98,19 @@ def get_metadata(
                                              radius=290)
 
             dfs = list()
-            for idx, rec in tqdm(results_df.iterrows(), total=len(results_df)):
+            for idx, rec in (pbar := tqdm(results_df.iterrows(), total=len(results_df))):
                 try:
+                    pbar.set_description(f'Getting metadata for {rec["sequence_id"]}')
                     dfs.append(ObservationInfo(meta=rec).image_metadata)
                 except Exception as e:
-                    tqdm.write(f'Error in {idx} {rec["sequence_id"]}')
+                    pbar.write(f'Error in {idx} {rec["sequence_id"]}')
 
             pd.concat(dfs).to_csv(output_fn)
 
         except ValueError as e:
             print(f'Error downloading metadata for {unit_id}: {e}', fg='red')
+
+    print(f'Metadata saved to [green]{output_fn}')
 
     return output_fn
 
