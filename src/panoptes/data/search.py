@@ -184,7 +184,7 @@ def get_all_observations(settings: CloudSettings = None) -> pd.DataFrame:
     return obs_df
 
 
-def get_metadata_for_observations(observations: pd.DataFrame) -> pd.DataFrame:
+def get_metadata(observations: pd.DataFrame) -> pd.DataFrame:
     """Get the metadata for a set of observations.
 
     Args:
