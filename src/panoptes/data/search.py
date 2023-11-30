@@ -11,6 +11,7 @@ from dateutil.parser import parse as parse_date
 from panoptes.utils.time import current_time
 from panoptes.utils.utils import listify
 
+from panoptes.data.observations import ObservationInfo
 from panoptes.data.settings import CloudSettings
 
 logger = logging.getLogger()
@@ -30,7 +31,7 @@ def search_observations(
         source=None,
         ra_col='coordinates_mount_ra',
         dec_col='coordinates_mount_dec',
-):
+) -> pd.DataFrame:
     """Search PANOPTES observations.
 
     Either a `coords` or `ra` and `dec` must be specified for search to work.
@@ -84,7 +85,6 @@ def search_observations(
     Returns:
         `pandas.DataFrame`: A table with the matching observation results.
     """
-    settings = CloudSettings()
     logger.debug(f'Setting up search params')
 
     if coords is None:
@@ -113,18 +113,8 @@ def search_observations(
     dec_max = (coords.dec + (radius * u.degree)).value
     dec_min = (coords.dec - (radius * u.degree)).value
 
-    logger.debug(f'Getting list of observations')
-
     # Get the observation list
-    obs_df = source
-    if obs_df is None:
-        local_path = download_file(settings.observations_url.unicode_string(),
-                                   cache='update',
-                                   show_progress=False,
-                                   pkgname='panoptes')
-        obs_df = pd.read_csv(local_path)
-
-    logger.info(f'Found {len(obs_df)} total observations')
+    obs_df = source if source is not None else get_all_observations()
 
     # Perform filtering on other fields here.
     logger.debug(f'Filtering observations')
@@ -170,3 +160,44 @@ def search_observations(
 
     logger.debug(f'Returning {len(obs_df)} observations')
     return obs_df
+
+
+def get_all_observations(settings: CloudSettings = None) -> pd.DataFrame:
+    """Get all the observations.
+
+    Args:
+        settings (CloudSettings, optional): The settings to use for the observations.
+            Defaults to None.
+
+    Returns:
+        pd.DataFrame: A DataFrame of all the observations.
+    """
+    settings = settings or CloudSettings()
+
+    logger.debug(f'Getting list of observations at {settings.observations_url}')
+    local_path = download_file(settings.observations_url.unicode_string(),
+                               cache='update',
+                               show_progress=False,
+                               pkgname='panoptes')
+    obs_df = pd.read_csv(local_path)
+    logger.info(f'Found {len(obs_df)} total observations')
+    return obs_df
+
+
+def get_metadata_for_observations(observations: pd.DataFrame) -> pd.DataFrame:
+    """Get the metadata for a set of observations.
+
+    Args:
+        observations (pd.DataFrame): A DataFrame of observations.
+
+    Returns:
+        pd.DataFrame: A DataFrame of metadata for the observations.
+    """
+    dfs = list()
+    for idx, rec in observations.iterrows():
+        try:
+            dfs.append(ObservationInfo(meta=rec).image_metadata)
+        except Exception as e:
+            pass
+
+    return pd.concat(dfs)
