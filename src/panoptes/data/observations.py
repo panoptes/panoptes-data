@@ -1,6 +1,7 @@
 import shutil
 import warnings
 from pathlib import Path
+from enum import IntEnum, auto
 
 import pandas as pd
 from astropy.nddata import Cutout2D, CCDData
@@ -12,6 +13,19 @@ from tqdm.auto import tqdm
 from panoptes.data.settings import CloudSettings
 
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
+
+
+class ObservationStatus(IntEnum):
+    ERROR = auto()
+    NOT_ENOUGH_FRAMES = auto()
+    UNKNOWN = auto()
+    CREATED = auto()
+    RECEIVING = auto()
+    RECEIVED = auto()
+    CALIBRATED = auto()
+    MATCHED = auto()
+    PROCESSING = auto()
+    PROCESSED = auto()
 
 
 class ObservationInfo:
