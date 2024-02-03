@@ -1,10 +1,10 @@
 # Changelog
 
-## Version 0.1.3 (development)
+## Version 0.1.3
 
 - Cleanup of images and observations.
 
-## Version 0.1.2 (development)
+## Version 0.1.2
 
 - Notebook updates.
 
