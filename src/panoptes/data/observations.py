@@ -22,10 +22,11 @@ class ObservationStatus(IntEnum):
     CREATED = auto()
     RECEIVING = auto()
     RECEIVED = auto()
-    CALIBRATED = auto()
-    MATCHED = auto()
     PROCESSING = auto()
-    PROCESSED = auto()
+    CALIBRATING = auto()
+    CALIBRATED = auto()
+    MATCHING = auto()
+    MATCHED = auto()
 
 
 class ObservationInfo:
