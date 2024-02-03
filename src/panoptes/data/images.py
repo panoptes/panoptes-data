@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
+from enum import IntEnum, auto
 from pathlib import Path
 from typing import Union
 
@@ -10,6 +11,25 @@ from panoptes.utils.time import flatten_time
 from panoptes.utils.images import fits as fits_utils
 
 from panoptes.data.settings import PATH_MATCHER
+
+
+class ImageStatus(IntEnum):
+    """The status of an image."""
+    ERROR = auto()
+    MASKED = auto()
+    UNKNOWN = auto()
+    RECEIVING = auto()
+    RECEIVED = auto()
+    UNSOLVED = auto()
+    PROCESSING = auto()
+    CALIBRATING = auto()
+    CALIBRATED = auto()
+    SOLVING = auto()
+    SOLVED = auto()
+    MATCHING = auto()
+    MATCHED = auto()
+    EXTRACTING = auto()
+    EXTRACTED = auto()
 
 
 @dataclass
