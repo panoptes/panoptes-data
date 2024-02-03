@@ -1,6 +1,33 @@
 # Changelog
 
-## Version 0.1 (development)
+## Version 0.1.3 (development)
+
+- Cleanup of images and observations.
+
+## Version 0.1.2 (development)
+
+- Notebook updates.
+
+## Version 0.1.1
+
+- Notebook and usability improvements.
+
+## Version 0.1.0
+
+- Minor bump to correspond with new GCP project and working library..
+
+## Version 0.0.9
+
+- Fixing the library to work with new GCP project.
+
+## Version 0.0.8
+
+- Import error fix.
+
+## Version 0.0.7
+
+- Update to pydantic v2 including pydantic-settings.
+- CLI improvements.
 
 ## Version 0.0.6
 
