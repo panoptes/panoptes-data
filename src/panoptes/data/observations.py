@@ -16,6 +16,7 @@ warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
 
 class ObservationStatus(IntEnum):
+    """The status of an observation."""
     ERROR = auto()
     NOT_ENOUGH_FRAMES = auto()
     UNKNOWN = auto()

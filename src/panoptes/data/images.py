@@ -14,6 +14,7 @@ from panoptes.data.settings import PATH_MATCHER
 
 
 class ImageStatus(IntEnum):
+    """The status of an image."""
     ERROR = auto()
     MASKED = auto()
     UNKNOWN = auto()
