@@ -88,9 +88,13 @@ class ObservationInfo:
         metadata_url = f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}'
         images_df = pd.read_csv(metadata_url)
 
-        # Set a time index.
-        images_df.time = pd.to_datetime(images_df.time)
-        images_df = images_df.set_index(['time']).sort_index()
+        # Try to set a time index.
+        time_column = 'time' if 'time' in images_df.columns else 'image_time'
+        try:
+            images_df[time_column] = pd.to_datetime(images_df[time_column])
+            images_df = images_df.set_index([time_column]).sort_index()
+        except AttributeError:
+            pass
 
         if query > '':
             images_df = images_df.query(query)
