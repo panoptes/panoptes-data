@@ -97,10 +97,8 @@ class ObservationInfo:
 
         return images_df
 
-    def get_image_list(self):
+    def get_image_list(self, bucket='panoptes-images-incoming', file_ext='.fits.fz'):
         """Get the images for the observation."""
-        bucket = 'panoptes-images'
-        file_ext = '.fits.fz'
 
         # Build up the image list from the metadata.
         image_list = [self._settings.img_base_url.unicode_string()
