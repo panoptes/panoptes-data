@@ -65,7 +65,7 @@ class ObservationInfo:
             self.meta = dict()
 
         self.image_metadata = self.get_metadata(query=image_query)
-        self.image_list = self.get_image_list()
+        self.image_list = self.image_metadata.public_url.values
 
     def get_image_cutout(self, data=None, coords=None, box_size=None, *args, **kwargs):
         """Gets a Cutout2D object for the given coords and box_size."""
@@ -96,18 +96,6 @@ class ObservationInfo:
             images_df = images_df.query(query)
 
         return images_df
-
-    def get_image_list(self, bucket='panoptes-images-incoming', file_ext='.fits.fz'):
-        """Get the images for the observation."""
-
-        # Build up the image list from the metadata.
-        image_list = [self._settings.img_base_url.unicode_string()
-                      + bucket + '/'
-                      + str(s).replace("_", "/")
-                      + file_ext for s in
-                      self.image_metadata.uid.values]
-
-        return image_list
 
     def download_images(self, image_list=None, output_dir=None, show_progress=True,
                         warn_on_error=True):
