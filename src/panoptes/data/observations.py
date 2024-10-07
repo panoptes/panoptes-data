@@ -65,7 +65,7 @@ class ObservationInfo:
             self.meta = dict()
 
         self.image_metadata = self.get_metadata(query=image_query)
-        self.image_list = self.get_image_list()
+        self.image_list = self.image_metadata.public_url.values
 
     def get_image_cutout(self, data=None, coords=None, box_size=None, *args, **kwargs):
         """Gets a Cutout2D object for the given coords and box_size."""
