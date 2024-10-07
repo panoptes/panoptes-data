@@ -6,9 +6,8 @@ from typing import Union
 
 from astropy.time import Time
 from dateutil.parser import parse as parse_date
-
-from panoptes.utils.time import flatten_time
 from panoptes.utils.images import fits as fits_utils
+from panoptes.utils.time import flatten_time
 
 from panoptes.data.settings import PATH_MATCHER
 
@@ -125,12 +124,14 @@ class ImagePathInfo:
 
     def get_full_id(self, sep='_') -> str:
         """Returns the full path id with the given separator."""
-        return f'{sep}'.join([
-            self.unit_id,
-            self.camera_id,
-            flatten_time(self.sequence_time),
-            flatten_time(self.image_time)
-        ])
+        return f'{sep}'.join(
+            [
+                self.unit_id,
+                self.camera_id,
+                flatten_time(self.sequence_time),
+                flatten_time(self.image_time)
+            ]
+        )
 
     @classmethod
     def from_fits(cls, fits_file):
@@ -147,9 +148,11 @@ class ImagePathInfo:
             unit_id, camera_id, sequence_time = sequence_id.split('_')
             _, _, image_time = image_id.split('_')
 
-            new_instance = cls(unit_id=unit_id,
-                               camera_id=camera_id,
-                               sequence_time=Time(parse_date(sequence_time)),
-                               image_time=Time(parse_date(image_time)))
+            new_instance = cls(
+                unit_id=unit_id,
+                camera_id=camera_id,
+                sequence_time=Time(parse_date(sequence_time)),
+                image_time=Time(parse_date(image_time))
+                )
 
         return new_instance

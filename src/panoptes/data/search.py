@@ -1,13 +1,12 @@
+import logging
 from contextlib import suppress
 
-import logging
 import astropy
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.utils.data import download_file
 from dateutil.parser import parse as parse_date
-
 from panoptes.utils.time import current_time
 from panoptes.utils.utils import listify
 
@@ -18,19 +17,19 @@ logger = logging.getLogger()
 
 
 def search_observations(
-        by_name=None,
-        coords=None,
-        unit_id=None,
-        start_date=None,
-        end_date=None,
-        ra=None,
-        dec=None,
-        radius=10,  # degrees
-        status=None,
-        min_num_images=1,
-        source=None,
-        ra_col='coordinates_mount_ra',
-        dec_col='coordinates_mount_dec',
+    by_name=None,
+    coords=None,
+    unit_id=None,
+    start_date=None,
+    end_date=None,
+    ra=None,
+    dec=None,
+    radius=10,  # degrees
+    status=None,
+    min_num_images=1,
+    source=None,
+    ra_col='coordinates_mount_ra',
+    dec_col='coordinates_mount_dec',
 ) -> pd.DataFrame:
     """Search PANOPTES observations.
 
@@ -175,10 +174,12 @@ def get_all_observations(settings: CloudSettings = None) -> pd.DataFrame:
     settings = settings or CloudSettings()
 
     logger.debug(f'Getting list of observations at {settings.observations_url}')
-    local_path = download_file(settings.observations_url.unicode_string(),
-                               cache='update',
-                               show_progress=False,
-                               pkgname='panoptes')
+    local_path = download_file(
+        settings.observations_url.unicode_string(),
+        cache='update',
+        show_progress=False,
+        pkgname='panoptes'
+        )
     obs_df = pd.read_csv(local_path)
     logger.info(f'Found {len(obs_df)} total observations')
     return obs_df

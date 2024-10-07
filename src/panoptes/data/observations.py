@@ -1,10 +1,10 @@
 import shutil
 import warnings
-from pathlib import Path
 from enum import IntEnum, auto
+from pathlib import Path
 
 import pandas as pd
-from astropy.nddata import Cutout2D, CCDData
+from astropy.nddata import CCDData, Cutout2D
 from astropy.utils.data import download_file
 from astropy.wcs import FITSFixedWarning
 from panoptes.utils.images import fits as fits_utils
@@ -97,13 +97,20 @@ class ObservationInfo:
 
         return images_df
 
-    def get_image_list(self):
-        """Get the images for the observation."""
-        bucket = 'panoptes-images'
-        file_ext = '.fits.fz'
+    def get_image_list(self, bucket: str | None = None, file_ext: str = '.fits.fz'):
+        """Get the images for the observation.
+
+        Args:
+             bucket: The bucket where the images are stored.
+             file_ext: The file extension of the images to retrieve.
+        Returns:
+            A pandas DataFrame containing the images for the observation.
+        """
+        url_base = self._settings.img_base_url.unicode_string()
+        bucket = bucket or self._settings.img_bucket
 
         # Build up the image list from the metadata.
-        image_list = [self._settings.img_base_url.unicode_string()
+        image_list = [url_base
                       + bucket + '/'
                       + str(s).replace("_", "/")
                       + file_ext for s in
@@ -112,7 +119,8 @@ class ObservationInfo:
         return image_list
 
     def download_images(self, image_list=None, output_dir=None, show_progress=True,
-                        warn_on_error=True):
+                        warn_on_error=True
+                        ):
         """Download the images to the output directory (by default named after the sequence_id).
 
         Args:
