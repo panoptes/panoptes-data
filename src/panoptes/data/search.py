@@ -1,5 +1,6 @@
 import logging
 from contextlib import suppress
+from datetime import datetime as dt
 
 import astropy
 import pandas as pd
@@ -28,15 +29,15 @@ def search_observations(
     status=None,
     min_num_images=1,
     source=None,
-    ra_col='coordinates_mount_ra',
-    dec_col='coordinates_mount_dec',
+    ra_col='coordinates.mount_ra',
+    dec_col='coordinates.mount_dec',
 ) -> pd.DataFrame:
     """Search PANOPTES observations.
 
     Either a `coords` or `ra` and `dec` must be specified for search to work.
 
     >>> from astropy.coordinates import SkyCoord
-    >>> from panoptes.data.observations import search_observations
+    >>> from panoptes.data.search import search_observations
     >>> coords = SkyCoord.from_name('Andromeda Galaxy')
     >>> start_date = '2019-01-01'
     >>> end_date = '2019-12-31'
@@ -65,7 +66,7 @@ def search_observations(
         radius (float): The search radius in degrees. Searches are currently done in
             a square box, so this is half the length of the side of the box.
         start_date (str|`datetime.datetime`|None): A valid datetime instance or `None` (default).
-            If `None` then the beginning of 2018 is used as a start date.
+            If `None` then the beginning of the current year is used as a start date.
         end_date (str|`datetime.datetime`|None): A valid datetime instance or `None` (default).
             If `None` then today is used.
         unit_id (str|list|None): A str or list of strs of unit_ids to include.
@@ -77,9 +78,9 @@ def search_observations(
         source (`pandas.DataFrame`|None): The dataframe to use or the search.
             If `None` (default) then the `source_url` will be used to look up the file.
         ra_col (str): The column in the `source` table to use for the RA, default
-            'coordinates_mount_ra'.
+            'coordinates.mount_ra'.
         dec_col (str): The column in the `source` table to use for the Dec, default
-            'coordinates_mount_dec'.
+            'coordinates.mount_dec'.
 
     Returns:
         `pandas.DataFrame`: A table with the matching observation results.
@@ -97,7 +98,7 @@ def search_observations(
 
             # Setup defaults for search.
     if start_date is None:
-        start_date = '2018-01-01'
+        start_date = f'{dt.today().year}-01-01'
 
     if end_date is None:
         end_date = current_time()
@@ -179,7 +180,7 @@ def get_all_observations(settings: CloudSettings = None) -> pd.DataFrame:
         cache='update',
         show_progress=False,
         pkgname='panoptes'
-        )
+    )
     obs_df = pd.read_csv(local_path)
     logger.info(f'Found {len(obs_df)} total observations')
     return obs_df

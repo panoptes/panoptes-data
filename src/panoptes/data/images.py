@@ -153,6 +153,6 @@ class ImagePathInfo:
                 camera_id=camera_id,
                 sequence_time=Time(parse_date(sequence_time)),
                 image_time=Time(parse_date(image_time))
-                )
+            )
 
         return new_instance

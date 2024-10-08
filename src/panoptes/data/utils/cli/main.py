@@ -16,12 +16,16 @@ app = typer.Typer()
 
 @app.command()
 def download(sequence_id: Union[str, None] = typer.Argument(..., help='Sequence ID for the Observation.'),
-             output_dir: Path = typer.Option(None,
-                                             '--output-dir', '-o',
-                                             help='Output directory for images, defaults to sequence_id.'),
-             image_query: str = typer.Option('status!="ERROR"',
-                                             '--image-query', '-q',
-                                             help='Query for images, default \'status!="ERROR"\''),
+             output_dir: Path = typer.Option(
+                 None,
+                 '--output-dir', '-o',
+                 help='Output directory for images, defaults to sequence_id.'
+             ),
+             image_query: str = typer.Option(
+                 'status!="ERROR"',
+                 '--image-query', '-q',
+                 help='Query for images, default \'status!="ERROR"\''
+             ),
              ) -> List[str]:
     """Downloads all FITS images for the observation."""
     local_files = list()
@@ -45,20 +49,27 @@ def download(sequence_id: Union[str, None] = typer.Argument(..., help='Sequence 
 
 @app.command()
 def get_metadata(
-        sequence_id: Union[str, None] = typer.Option(None, '--sequence-id', '-s',
-                                                     help='Sequence ID for the Observation.'),
-        unit_id: Union[str, None] = typer.Option(None, '--unit-id', '-u',
-                                                 help='Unit ID for the Observation. '
-                                                      'Use with a date range to download all '
-                                                      'metadata for a unit.'),
-        start_date: Union[str, None] = typer.Option(None, '--start-date', '-s',
-                                                    help='Start date for downloading metadata in '
-                                                         'form YYYY-MM-DD'),
-        end_date: Union[str, None] = typer.Option(None, '--end-date', '-s',
-                                                  help='End date for downloading metadata, '
-                                                       'defaults to now.'),
-        output_dir: Path = typer.Option(Path('.'), '--output-dir', '-o',
-                                        help='Output directory for metadata file.'),
+    sequence_id: Union[str, None] = typer.Option(
+        None, '--sequence-id', '-s',
+        help='Sequence ID for the Observation.'
+    ),
+    unit_id: Union[str, None] = typer.Option(
+        None, '--unit-id', '-u',
+        help='Unit ID for the Observation. '
+             'Use with a date range to download all metadata for a unit.'
+    ),
+    start_date: Union[str, None] = typer.Option(
+        None, '--start-date', '-s',
+        help='Start date for downloading metadata in form YYYY-MM-DD'
+    ),
+    end_date: Union[str, None] = typer.Option(
+        None, '--end-date', '-s',
+        help='End date for downloading metadata, defaults to now.'
+    ),
+    output_dir: Path = typer.Option(
+        Path('.'), '--output-dir', '-o',
+        help='Output directory for metadata file.'
+    ),
 ):
     """Download metadata.
 
@@ -92,10 +103,12 @@ def get_metadata(
 
         output_fn = output_dir / f'{unit_id}-{start_date}-{end_date}-metadata.csv'
         try:
-            results_df = search_observations(unit_id=unit_id.upper(),
-                                             start_date=start_date,
-                                             by_name='M42',
-                                             radius=290)
+            results_df = search_observations(
+                unit_id=unit_id.upper(),
+                start_date=start_date,
+                by_name='M42',
+                radius=290
+            )
 
             dfs = list()
             for idx, rec in (pbar := tqdm(results_df.iterrows(), total=len(results_df))):
@@ -117,41 +130,57 @@ def get_metadata(
 
 @app.command()
 def search(
-        name: str = typer.Option(None, '--name', '-n',
-                                 help='Name of object to search for.'),
-        unit_id: str = typer.Option(None, '--unit-id', '-u',
-                                    help='Unit ID for the Observation.'),
-        start_date: str = typer.Option(None, '--start-date', '-s',
-                                       help='Start date for downloading metadata in '
-                                            'form YYYY-MM-DD'),
-        end_date: str = typer.Option(None, '--end-date', '-s',
-                                     help='End date for downloading metadata, '
-                                          'defaults to now.'),
-        ra: float = typer.Option(None, '--ra', '-r',
-                                 help='RA in degrees for search.'),
-        dec: float = typer.Option(None, '--dec', '-d',
-                                  help='Dec in degrees for search.'),
-        radius: int = typer.Option(10, '--radius', '-r',
-                                   help='Radius in degrees for search.'),
-        min_num_images: int = typer.Option(1, '--min-num-images', '-m',
-                                           help='Minimum number of images.'),
+    name: str = typer.Option(
+        None, '--name', '-n',
+        help='Name of object to search for.'
+    ),
+    unit_id: str = typer.Option(
+        None, '--unit-id', '-u',
+        help='Unit ID for the Observation.'
+    ),
+    start_date: str = typer.Option(
+        None, '--start-date', '-s',
+        help='Start date for downloading metadata in form YYYY-MM-DD'
+    ),
+    end_date: str = typer.Option(
+        None, '--end-date', '-s',
+        help='End date for downloading metadata, defaults to now.'
+    ),
+    ra: float = typer.Option(
+        None, '--ra', '-r',
+        help='RA in degrees for search.'
+    ),
+    dec: float = typer.Option(
+        None, '--dec', '-d',
+        help='Dec in degrees for search.'
+    ),
+    radius: int = typer.Option(
+        10, '--radius', '-r',
+        help='Radius in degrees for search.'
+    ),
+    min_num_images: int = typer.Option(
+        1, '--min-num-images', '-m',
+        help='Minimum number of images.'
+    ),
 
 ):
     """Search for observations."""
-    results = search_observations(unit_id=unit_id,
-                                  start_date=start_date,
-                                  end_date=end_date,
-                                  by_name=name,
-                                  ra=ra,
-                                  dec=dec,
-                                  min_num_images=min_num_images,
-                                  radius=radius)
+    results = search_observations(
+        unit_id=unit_id,
+        start_date=start_date,
+        end_date=end_date,
+        by_name=name,
+        ra=ra,
+        dec=dec,
+        min_num_images=min_num_images,
+        radius=radius
+    )
 
     if len(results) == 0:
         print('[red]No results found.')
         return
 
-    display_cols = ['field_name', 'unit_id', 'coordinates_mount_ra', 'coordinates_mount_dec', 'num_images', 'exptime',
+    display_cols = ['field_name', 'unit_id', 'coordinates.mount_ra', 'coordinates.mount_dec', 'num_images', 'exptime',
                     'total_exptime', 'time']
     markdown_table = results.set_index('sequence_id')[display_cols].to_markdown()
     print(markdown_table)
