@@ -90,6 +90,7 @@ def search_observations(
     if coords is None:
         if by_name is not None:
             coords = SkyCoord.from_name(by_name)
+            print(f'Found coords for {by_name}: {coords}')
         else:
             try:
                 coords = SkyCoord(ra=ra, dec=dec, unit='degree')
@@ -117,31 +118,33 @@ def search_observations(
     obs_df = source if source is not None else get_all_observations()
 
     # Perform filtering on other fields here.
-    logger.debug(f'Filtering observations')
-    obs_df.query(
-        f'{dec_col} >= {dec_min} and {dec_col} <= {dec_max}'
-        ' and '
-        f'{ra_col} >= {ra_min} and {ra_col} <= {ra_max}'
-        ' and '
-        f'time >= "{start_date}"'
-        ' and '
-        f'time <= "{end_date}"'
-        ' and '
-        f'num_images >= {min_num_images}',
-        inplace=True
-    )
-    logger.debug(f'Found {len(obs_df)} observations after initial filter')
+    print(f'Filtering observations')
+    query_string = (f'`{dec_col}` >= {dec_min} '
+                    f'and '
+                    f'`{dec_col}` <= {dec_max}'
+                    f' and '
+                    f'`{ra_col}` >= {ra_min}'
+                    f' and '
+                    f'`{ra_col}` <= {ra_max}'
+                    f' and '
+                    f'time >= "{start_date}"'
+                    f' and '
+                    f'time <= "{end_date}"'
+                    f' and num_images >= {min_num_images}')
+
+    obs_df.query(query_string, inplace=True)
+    print(f'Found {len(obs_df)} observations after initial filter')
 
     unit_ids = listify(unit_id)
     if len(unit_ids) > 0 and unit_ids != 'The Whole World! 🌎':
         obs_df.query(f'unit_id in {listify(unit_ids)}', inplace=True)
-    logger.debug(f'Found {len(obs_df)} observations after unit filter')
+    print(f'Found {len(obs_df)} observations after unit filter')
 
     with suppress(Exception):
         obs_df.query(f'status in {listify(status)}', inplace=True)
-        logger.debug(f'Found {len(obs_df)} observations after status filter')
+        print(f'Found {len(obs_df)} observations after status filter')
 
-    logger.debug(f'Found {len(obs_df)} observations after filtering')
+    print(f'Found {len(obs_df)} observations after filtering')
 
     obs_df = obs_df.reindex(sorted(obs_df.columns), axis=1)
     obs_df.sort_values(by=['time'], inplace=True)
@@ -158,7 +161,7 @@ def search_observations(
     # Fix bad field name.
     obs_df.loc[obs_df.field_name.str.endswith('00:00:42+00:00'), 'field_name'] = 'M42'
 
-    logger.debug(f'Returning {len(obs_df)} observations')
+    print(f'Returning {len(obs_df)} observations')
     return obs_df
 
 
@@ -174,7 +177,7 @@ def get_all_observations(settings: CloudSettings = None) -> pd.DataFrame:
     """
     settings = settings or CloudSettings()
 
-    logger.debug(f'Getting list of observations at {settings.observations_url}')
+    print(f'Getting list of observations at {settings.observations_url}')
     local_path = download_file(
         settings.observations_url.unicode_string(),
         cache='update',

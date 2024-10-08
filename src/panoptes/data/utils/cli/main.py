@@ -11,7 +11,7 @@ from tqdm import tqdm
 from panoptes.data.observations import ObservationInfo
 from panoptes.data.search import search_observations
 
-app = typer.Typer()
+app = typer.Typer(pretty_exceptions_enable=False)
 
 
 @app.command()
