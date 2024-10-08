@@ -140,9 +140,9 @@ def search_observations(
         obs_df.query(f'unit_id in {listify(unit_ids)}', inplace=True)
     print(f'Found {len(obs_df)} observations after unit filter')
 
-    with suppress(Exception):
+    if status is not None:
         obs_df.query(f'status in {listify(status)}', inplace=True)
-        print(f'Found {len(obs_df)} observations after status filter')
+        print(f'Found {len(obs_df)} observations after {status=} filter')
 
     print(f'Found {len(obs_df)} observations after filtering')
 

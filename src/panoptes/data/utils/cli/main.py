@@ -184,6 +184,7 @@ def search(
                     'total_exptime', 'time']
     markdown_table = results.set_index('sequence_id')[display_cols].to_markdown()
     print(markdown_table)
+    print(f'Found {len(results)} observations.')
 
 
 if __name__ == "__main__":
