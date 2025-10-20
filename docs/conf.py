@@ -166,7 +166,7 @@ pygments_style = "sphinx"
 todo_emit_warnings = True
 
 # Mock heavy or optional imports so autodoc can generate docs without them.
-autodoc_mock_imports = ["pandas", "pydantic", "pydantic_settings", "astropy", "tqdm", "typer"]
+autodoc_mock_imports = ["pydantic", "pydantic_settings", "tqdm", "typer"]
 
 # -- Options for HTML output -------------------------------------------------
 

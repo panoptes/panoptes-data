@@ -69,6 +69,6 @@ target-version = "py312"
 src = ["src"]
 
 [tool.pytest.ini_options]
-addopts = ["--cov", "panoptes.data", "--cov-report", "term-missing", "--verbose"]
+addopts = ["--cov=panoptes.data", "--cov-report", "term-missing", "--verbose"]
 norecursedirs = ["dist", "build", ".tox"]
 testpaths = ["tests"]

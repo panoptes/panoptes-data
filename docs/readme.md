@@ -56,7 +56,7 @@ python3 -m venv .venv
 
 # install full docs deps
 python -m pip install --upgrade pip setuptools wheel
-pip install -r docs/requirements-full.txt
+pip install -r docs/requirements.txt
 
 # install the package (editable) so autodoc can import it
 pip install -e .
