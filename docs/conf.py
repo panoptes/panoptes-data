@@ -105,7 +105,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "panoptes-data"
-copyright = "2023, Wilfred Tyler Gee"
+copyright = "2025, Wilfred Tyler Gee"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -164,6 +164,9 @@ pygments_style = "sphinx"
 
 # If this is True, todo emits a warning for each TODO entries. The default is False.
 todo_emit_warnings = True
+
+# Mock heavy or optional imports so autodoc can generate docs without them.
+autodoc_mock_imports = ["pandas", "pydantic", "pydantic_settings", "astropy", "tqdm", "typer"]
 
 # -- Options for HTML output -------------------------------------------------
 

@@ -1,0 +1,24 @@
+# Full docs + runtime requirements for building the documentation locally or in CI
+# Start from docs/requirements.txt and include runtime dependencies used by autodoc
+
+# Sphinx + markdown parsing and theme
+linkify-it-py
+myst-parser
+pydata-sphinx-theme
+sphinx>=3.2.1
+
+# Optional: install the package (editable) rather than individual runtime deps
+# pip install -e .
+
+# Runtime deps (install these if you want fully-resolved API docs)
+pandas
+astropy
+pydantic
+typer
+tqdm
+panoptes-utils[images]
+photutils
+
+# Note: `panoptes-utils[images]` pulls in many image-related packages (matplotlib, scipy, pillow, ...)
+# If you want a lighter install, prefer installing only the packages you need for the modules
+# you want to document.
