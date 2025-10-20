@@ -2,9 +2,10 @@
 
 ## UNRELEASED
 
-- Moderninze the repo to use `pyproject.toml`.
+- Modernize the repo to use `pyproject.toml`.
 - Update docs.
 - Add basic tests.
+- Releases are created directly by GitHub Actions.
 
 ## Version 0.2.0 (2024-10-08)
 
