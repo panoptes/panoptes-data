@@ -28,3 +28,18 @@ class ImageStatus(IntEnum):
     MATCHED = auto()
     EXTRACTING = auto()
     EXTRACTED = auto()
+
+
+class ObservationStatus(IntEnum):
+    """The status of an observation."""
+    ERROR = auto()
+    NOT_ENOUGH_FRAMES = auto()
+    UNKNOWN = auto()
+    CREATED = auto()
+    RECEIVING = auto()
+    RECEIVED = auto()
+    PROCESSING = auto()
+    CALIBRATING = auto()
+    CALIBRATED = auto()
+    MATCHING = auto()
+    MATCHED = auto()

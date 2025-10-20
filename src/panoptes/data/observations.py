@@ -1,6 +1,5 @@
 import shutil
 import warnings
-from enum import IntEnum, auto
 from pathlib import Path
 
 import pandas as pd
@@ -13,21 +12,6 @@ from panoptes.data.settings import CloudSettings
 from panoptes.utils.images import fits as fits_utils
 
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
-
-
-class ObservationStatus(IntEnum):
-    """The status of an observation."""
-    ERROR = auto()
-    NOT_ENOUGH_FRAMES = auto()
-    UNKNOWN = auto()
-    CREATED = auto()
-    RECEIVING = auto()
-    RECEIVED = auto()
-    PROCESSING = auto()
-    CALIBRATING = auto()
-    CALIBRATED = auto()
-    MATCHING = auto()
-    MATCHED = auto()
 
 
 class ObservationInfo:
