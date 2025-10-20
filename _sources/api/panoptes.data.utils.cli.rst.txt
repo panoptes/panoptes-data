@@ -1,0 +1,15 @@
+panoptes.data.utils.cli namespace
+=================================
+
+.. py:module:: panoptes.data.utils.cli
+
+Submodules
+----------
+
+panoptes.data.utils.cli.main module
+-----------------------------------
+
+.. automodule:: panoptes.data.utils.cli.main
+   :members:
+   :show-inheritance:
+   :undoc-members:

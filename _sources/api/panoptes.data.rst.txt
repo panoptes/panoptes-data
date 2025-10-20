@@ -1,0 +1,37 @@
+panoptes.data package
+=====================
+
+Submodules
+----------
+
+panoptes.data.observations module
+---------------------------------
+
+.. automodule:: panoptes.data.observations
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+panoptes.data.search module
+---------------------------
+
+.. automodule:: panoptes.data.search
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+panoptes.data.settings module
+-----------------------------
+
+.. automodule:: panoptes.data.settings
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: panoptes.data
+   :members:
+   :show-inheritance:
+   :undoc-members:

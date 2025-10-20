@@ -1,0 +1,626 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>PANOPTES Data tools &#8212; panoptes-data</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=acb4bfbf"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="PANOPTES Data tools" href="readme.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.2.1.dev9+g8302c41f6" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="#">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">panoptes-data</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="readme.html">
+    PANOPTES Data tools
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="authors.html">
+    Contributors
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="contributing.html">
+    Contributing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="changelog.html">
+    Changelog
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="license.html">
+    License
+  </a>
+</li>
+
+            <li class="nav-item dropdown">
+                <button class="btn dropdown-toggle nav-item" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false"
+                aria-controls="pst-nav-more-links">
+                    More
+                </button>
+                <ul id="pst-nav-more-links" class="dropdown-menu">
+                    
+<li class=" ">
+  <a class="nav-link dropdown-item nav-internal" href="api/modules.html">
+    Module Reference
+  </a>
+</li>
+
+                </ul>
+            </li>
+            
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="readme.html">
+    PANOPTES Data tools
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="authors.html">
+    Contributors
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="contributing.html">
+    Contributing
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="changelog.html">
+    Changelog
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="license.html">
+    License
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api/modules.html">
+    Module Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <p><a class="reference external" href="https://panoptes-data.readthedocs.io/en/latest/?badge=latest"><img alt="Documentation Status" src="https://readthedocs.org/projects/panoptes-data/badge/?version=latest" /></a></p>
+<section class="tex2jax_ignore mathjax_ignore" id="panoptes-data-tools">
+<h1>PANOPTES Data tools<a class="headerlink" href="#panoptes-data-tools" title="Link to this heading">#</a></h1>
+<p>Tools for searching and downloading PANOPTES data.</p>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Link to this heading">#</a></h2>
+<p>Install from pip:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>panoptes-data
+</pre></div>
+</div>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">#</a></h2>
+<p>See the example Jupyter Notebooks in the <code class="docutils literal notranslate"><span class="pre">notebooks/</span></code> directory.</p>
+<section id="finding-observations">
+<h3>Finding observations<a class="headerlink" href="#finding-observations" title="Link to this heading">#</a></h3>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.data.search</span><span class="w"> </span><span class="kn">import</span> <span class="n">search_observations</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.data.observations</span><span class="w"> </span><span class="kn">import</span> <span class="n">ObservationInfo</span>
+
+<span class="c1"># Find some observations</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">search_observations</span><span class="p">(</span><span class="n">by_name</span><span class="o">=</span><span class="s1">&#39;M42&#39;</span><span class="p">)</span>
+
+<span class="c1"># Use last result entry to create ObservationInfo object.</span>
+<span class="n">obs_info</span> <span class="o">=</span> <span class="n">ObservationInfo</span><span class="p">(</span><span class="n">meta</span><span class="o">=</span><span class="n">results</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">obs_info</span><span class="o">.</span><span class="n">meta</span><span class="p">)</span>
+
+<span class="c1"># Create an ObservationInfo object directly from a sequence_id.</span>
+<span class="n">obs_info</span> <span class="o">=</span> <span class="n">ObservationInfo</span><span class="p">(</span><span class="s1">&#39;PAN001_14d3bd_20180113T052325&#39;</span><span class="p">)</span>
+<span class="c1"># But then there is no metadata:</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">obs_info</span><span class="o">.</span><span class="n">meta</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Sample output (truncated):
+
+camera_id                                           14d3bd
+camera_lens_serial_number                        HA0028608
+camera_serial_number                           12070048413
+coordinates_mount_dec                            -6.229778
+coordinates_mount_ra                               76.0815
+exptime                                              120.0
+field_name                                         Wasp 35
+num_images                                            28.0
+sequence_id                  PAN001_14d3bd_20180113T052325
+software_version                                POCSv0.6.0
+time                             2018-01-13 05:23:25+00:00
+total_exptime                                       3360.0
+unit_id                                             PAN001
+Name: 6121, dtype: object
+</pre></div>
+</div>
+</section>
+<section id="downloading-images">
+<h3>Downloading images<a class="headerlink" href="#downloading-images" title="Link to this heading">#</a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">ObservationInfo</span></code> object makes it easy to download the files:</p>
+<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="n">obs_info</span><span class="o">.</span><span class="n">download_images</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="command-line-tools">
+<h3>Command-line tools<a class="headerlink" href="#command-line-tools" title="Link to this heading">#</a></h3>
+<p>There is a simple command line tool that allows for both searching and downloading of images and metadata.</p>
+<section id="search-for-observations">
+<h4>Search for observations:<a class="headerlink" href="#search-for-observations" title="Link to this heading">#</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>panoptes-data<span class="w"> </span>search<span class="w"> </span>--name<span class="w"> </span>M42<span class="w"> </span>--min-num-images<span class="w"> </span><span class="m">90</span>
+</pre></div>
+</div>
+<p>Example table output:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>| sequence_id                   | field_name   | unit_id   |   coordinates_mount_ra |   coordinates_mount_dec |   num_images |   exptime |   total_exptime | time                      |
+|:------------------------------|:-------------|:----------|-----------------------:|------------------------:|-------------:|----------:|----------------:|:--------------------------|
+| PAN022_977c86_20220108T090553 | M42          | PAN022    |                83.8221 |                -5.39111 |           95 |   90      |            8550 | 2022-01-08 09:05:53+00:00 |
+| PAN022_538cc6_20220108T090553 | M42          | PAN022    |                83.8221 |                -5.39111 |           95 |   89      |            8455 | 2022-01-08 09:05:53+00:00 |
+| PAN019_42433a_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   90      |            8100 | 2022-01-14 08:57:22+00:00 |
+| PAN019_c623e9_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   89.0222 |            8012 | 2022-01-14 08:57:22+00:00 |
+| PAN019_c623e9_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   89.019  |            9347 | 2022-01-15 08:21:08+00:00 |
+| PAN019_42433a_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   90.0095 |            9451 | 2022-01-15 08:21:08+00:00 |
+</pre></div>
+</div>
+</section>
+<section id="downloading-all-images-for-an-observation">
+<h4>Downloading all images for an observation:<a class="headerlink" href="#downloading-all-images-for-an-observation" title="Link to this heading">#</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>panoptes-data<span class="w"> </span>download<span class="w"> </span>PAN022_977c86_20220108T090553
+</pre></div>
+</div>
+</section>
+<section id="get-all-metadata-for-a-unit-in-a-given-date-range">
+<h4>Get all metadata for a unit in a given date range:<a class="headerlink" href="#get-all-metadata-for-a-unit-in-a-given-date-range" title="Link to this heading">#</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>panoptes-data<span class="w"> </span>get-metadata<span class="w"> </span>--unit-id<span class="w"> </span>PAN022<span class="w"> </span>--start-date<span class="w"> </span><span class="s1">&#39;2022-01-08&#39;</span>
+</pre></div>
+</div>
+<p>See <code class="docutils literal notranslate"><span class="pre">panoptes-data</span> <span class="pre">--help</span></code> for more options.</p>
+</section>
+</section>
+</section>
+<section id="user-documentation">
+<h2>User documentation<a class="headerlink" href="#user-documentation" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">PANOPTES Data tools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#install">Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="readme.html#examples">Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#building-the-documentation">Building the documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readme.html#ci-automated-docs-build">CI / Automated docs build</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Contributors</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#issue-reports">Issue Reports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#documentation-improvements">Documentation Improvements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#code-contributions">Code Contributions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#maintainer-tasks">Maintainer tasks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#unreleased">UNRELEASED</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-2-0-2024-10-08">Version 0.2.0 (2024-10-08)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-9-2024-10-07">Version 0.1.9 (2024-10-07)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-8-2024-10-07">Version 0.1.8 (2024-10-07)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-7-2024-04-18">Version 0.1.7 (2024-04-18)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-6-2024-04-18">Version 0.1.6 (2024-04-18)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-5-2024-02-02">Version 0.1.5 (2024-02-02)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-4-2024-02-02">Version 0.1.4 (2024-02-02)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-3">Version 0.1.3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-2">Version 0.1.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-1">Version 0.1.1</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-1-0">Version 0.1.0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-9">Version 0.0.9</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-8">Version 0.0.8</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-7">Version 0.0.7</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-6">Version 0.0.6</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-5">Version 0.0.5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-4">Version 0.0.4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-3-2022-06-24">Version 0.0.3 (2022-06-24)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-2">Version 0.0.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-0-1-2022-06-23">Version 0.0.1 (2022-06-23)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">License</a></li>
+</ul>
+</div>
+</section>
+<section id="api-reference">
+<h2>API reference<a class="headerlink" href="#api-reference" title="Link to this heading">#</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/modules.html">Module Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/panoptes.html">panoptes namespace</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">#</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="right-next"
+       href="readme.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">PANOPTES Data tools</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#install">Install</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#examples">Examples</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#finding-observations">Finding observations</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#downloading-images">Downloading images</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#command-line-tools">Command-line tools</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#search-for-observations">Search for observations:</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#downloading-all-images-for-an-observation">Downloading all images for an observation:</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#get-all-metadata-for-a-unit-in-a-given-date-range">Get all metadata for a unit in a given date range:</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#user-documentation">User documentation</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#api-reference">API reference</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.md.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Wilfred Tyler Gee.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
