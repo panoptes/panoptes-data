@@ -3,6 +3,18 @@
 :relative-images:
 ```
 
+## User documentation
+
+```{toctree}
+:maxdepth: 2
+
+readme
+authors
+contributing
+changelog
+license
+```
+
 ## API reference
 
 ```{toctree}

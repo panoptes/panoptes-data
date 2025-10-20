@@ -2,17 +2,16 @@ import logging
 from contextlib import suppress
 from datetime import datetime as dt
 
-import astropy
 import pandas as pd
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.utils.data import download_file
 from dateutil.parser import parse as parse_date
-from panoptes.utils.time import current_time
-from panoptes.utils.utils import listify
 
 from panoptes.data.observations import ObservationInfo
 from panoptes.data.settings import CloudSettings
+from panoptes.utils.time import current_time
+from panoptes.utils.utils import listify
 
 logger = logging.getLogger()
 
@@ -85,7 +84,7 @@ def search_observations(
     Returns:
         `pandas.DataFrame`: A table with the matching observation results.
     """
-    logger.debug(f'Setting up search params')
+    logger.debug('Setting up search params')
 
     if coords is None:
         if by_name is not None:
@@ -118,7 +117,7 @@ def search_observations(
     obs_df = source if source is not None else get_all_observations()
 
     # Perform filtering on other fields here.
-    print(f'Filtering observations')
+    print('Filtering observations')
     query_string = (f'`{dec_col}` >= {dec_min} '
                     f'and '
                     f'`{dec_col}` <= {dec_max}'
@@ -202,7 +201,7 @@ def get_metadata(observations: pd.DataFrame) -> pd.DataFrame:
     for idx, rec in observations.iterrows():
         try:
             dfs.append(ObservationInfo(meta=rec).image_metadata)
-        except Exception as e:
+        except Exception:
             pass
 
     return pd.concat(dfs)

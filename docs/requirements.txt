@@ -5,3 +5,10 @@ linkify-it-py
 myst-parser
 pydata-sphinx-theme
 sphinx>=3.2.1
+pandas
+astropy
+pydantic
+typer
+tqdm
+panoptes-utils[images]
+photutils

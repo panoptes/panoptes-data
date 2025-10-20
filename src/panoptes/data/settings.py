@@ -1,5 +1,4 @@
-import re
-from typing import Pattern
+from enum import IntEnum, auto
 
 from pydantic.networks import AnyHttpUrl
 from pydantic_settings import BaseSettings
@@ -12,18 +11,35 @@ class CloudSettings(BaseSettings):
     observations_url: AnyHttpUrl = 'https://storage.googleapis.com/panoptes-assets/observations.csv'
 
 
-# This is a regular expression that will match the default file layout for images taken
-# with a PANOPTES unit, including the optional "field name".
-PATH_MATCHER: Pattern[str] = re.compile(
-    r"""^
-    (?P<pre_info>.*)?                                                   # Anything before unit_id
-    (?P<unit_id>PAN\d{3})                                               # unit_id   - PAN + 3 digits
-    /?(?P<field_name>.*)?                                               # Legacy field name - any
-    [/_](?P<camera_id>[a-gA-G0-9]{6})                                   # camera_id - 6 digits
-    [/_](?P<sequence_time>[0-9]{8}T[0-9]{6})                            # Observation start time
-    [/_](?P<full_image_id>PAN\d{3}_[a-gA-G0-9]{6}_[0-9]{8}T[0-9]{6}_)?  # Observation full image id
-    [/_]?(?P<image_time>[0-9]{8}T[0-9]{6})                              # Image start time
-    (?P<post_info>.*)?                                                  # Anything after (file ext)
-    $""",
-    re.VERBOSE
-)
+class ImageStatus(IntEnum):
+    """The status of an image."""
+    ERROR = auto()
+    MASKED = auto()
+    UNKNOWN = auto()
+    RECEIVING = auto()
+    RECEIVED = auto()
+    UNSOLVED = auto()
+    PROCESSING = auto()
+    CALIBRATING = auto()
+    CALIBRATED = auto()
+    SOLVING = auto()
+    SOLVED = auto()
+    MATCHING = auto()
+    MATCHED = auto()
+    EXTRACTING = auto()
+    EXTRACTED = auto()
+
+
+class ObservationStatus(IntEnum):
+    """The status of an observation."""
+    ERROR = auto()
+    NOT_ENOUGH_FRAMES = auto()
+    UNKNOWN = auto()
+    CREATED = auto()
+    RECEIVING = auto()
+    RECEIVED = auto()
+    PROCESSING = auto()
+    CALIBRATING = auto()
+    CALIBRATED = auto()
+    MATCHING = auto()
+    MATCHED = auto()
