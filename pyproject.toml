@@ -36,6 +36,16 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+testing = [
+    "coverage>=7.0,<8.0",
+    "pycodestyle>=2.10,<3.0",
+    "pytest>=7.0,<8.0",
+    "pytest-cov>=4.0,<5.0",
+    "pytest-doctestplus>=1.0,<2.0",
+    "tox>=4.0,<5.0",
+]
+
 [project.urls]
 Documentation = "https://projectpanoptes.org/"
 Source = "https://github.com/panoptes/panoptes-data/"

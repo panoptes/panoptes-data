@@ -1,6 +1,6 @@
 # Changelog
 
-## UNRELEASED
+## 0.2.2 (2025-10-20)
 
 - Modernize the repo to use `pyproject.toml`.
 - Update docs.
