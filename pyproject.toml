@@ -68,10 +68,6 @@ line-length = 100
 target-version = "py312"
 src = ["src"]
 
-[tool.ruff.lint]
-select = ["E", "W", "F", "I"]
-extend-ignore = ["E203", "W503"]
-
 [tool.pytest.ini_options]
 addopts = ["--cov", "panoptes.data", "--cov-report", "term-missing", "--verbose"]
 norecursedirs = ["dist", "build", ".tox"]

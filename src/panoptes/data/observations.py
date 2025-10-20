@@ -7,10 +7,10 @@ import pandas as pd
 from astropy.nddata import CCDData, Cutout2D
 from astropy.utils.data import download_file
 from astropy.wcs import FITSFixedWarning
-from panoptes.utils.images import fits as fits_utils
 from tqdm.auto import tqdm
 
 from panoptes.data.settings import CloudSettings
+from panoptes.utils.images import fits as fits_utils
 
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
