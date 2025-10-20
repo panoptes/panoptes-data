@@ -1,9 +1,78 @@
 [build-system]
-# AVOID CHANGING REQUIRES: IT WILL BE UPDATED BY PYSCAFFOLD!
-requires = ["setuptools>=46.1.0", "setuptools_scm[toml]>=5", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.18", "hatch-vcs>=0.3"]
+build-backend = "hatchling.build"
 
-[tool.setuptools_scm]
-# For smarter version schemes and other configuration options,
-# check out https://github.com/pypa/setuptools_scm
-version_scheme = "no-guess-dev"
+[project]
+name = "panoptes-data"
+description = "Tools for working with PANOPTES data."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE.txt" }
+authors = [
+    { name = "Wilfred Tyler Gee", email = "wtylergee@gmail.com" },
+]
+keywords = ["astronomy", "panoptes", "data"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "astropy",
+    "numpy",
+    "pandas",
+    "panoptes-utils[images]",
+    "pydantic",
+    "pydantic-settings",
+    "python-dateutil",
+    "rich[jupyter]",
+    "tabulate",
+    "tqdm",
+    "typer",
+]
+dynamic = ["version"]
+
+[project.urls]
+Documentation = "https://projectpanoptes.org/"
+Source = "https://github.com/panoptes/panoptes-data/"
+Download = "https://pypi.org/project/panoptes-data/#files"
+
+[project.scripts]
+panoptes-data = "panoptes.data.utils.cli.main:app"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build]
+include = ["src/panoptes/**", "README.md", "LICENSE.txt"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/panoptes"]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "ruff>=0.5.0"
+]
+[tool.hatch.envs.default.scripts]
+lint = "ruff check ."
+lint-fix = "ruff check --fix ."
+fmt = "ruff format ."
+fmt-check = "ruff format --check ."
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+extend-ignore = ["E203", "W503"]
+
+[tool.pytest.ini_options]
+addopts = ["--cov", "panoptes.data", "--cov-report", "term-missing", "--verbose"]
+norecursedirs = ["dist", "build", ".tox"]
+testpaths = ["tests"]
