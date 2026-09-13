@@ -12,9 +12,8 @@
 - A missing required metadata column now raises a `ValueError` naming the
   sequence and listing the columns that did arrive, instead of an
   `AttributeError` from pandas.
-- The `download` and `get-metadata` CLI commands exit non-zero when they fail.
-  They caught every exception and printed it in red, which is why a
-  package-wide break read as a download problem.
+- The `download` and `get-metadata` CLI commands exit non-zero when they fail,
+  instead of catching every exception and printing it in red.
 
 ### Added
 

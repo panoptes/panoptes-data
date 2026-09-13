@@ -41,8 +41,6 @@ def download(sequence_id: str | None = typer.Argument(..., help='Sequence ID for
         print(f'Downloaded {len(local_files)} images to {output_dir}.')
 
     except Exception as e:
-        # Exit non-zero: swallowing this made a package-wide break read as a
-        # download problem for years.
         print(f'[red]Error downloading images for {sequence_id}: {e}')
         raise typer.Exit(code=1) from e
 

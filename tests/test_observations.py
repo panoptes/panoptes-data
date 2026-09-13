@@ -26,7 +26,7 @@ class FakeSettings:
 
 
 def make_meta_df():
-    # Metadata as written 2016-2024: a `public_url` column alongside the uid.
+    # Records that carry a `public_url` alongside the uid.
     df = pd.DataFrame(
         {
             "time": ["2020-01-02T00:00:00+00:00", "2020-01-01T00:00:00+00:00"],
@@ -39,7 +39,7 @@ def make_meta_df():
 
 
 def make_2025_meta_df():
-    # Metadata as written from 2025 onward: no `public_url` at all.
+    # Records that carry no `public_url` at all.
     df = pd.DataFrame(
         {
             "time": ["2025-04-07T06:19:56+00:00"],
@@ -73,7 +73,7 @@ def test_get_metadata_parses_and_sorts(monkeypatch):
 
 
 def test_sequence_without_public_url_still_works(monkeypatch):
-    """Regression for #12: 2025+ metadata carries no `public_url` column."""
+    """Regression for panoptes/panoptes-data#12: some records have no `public_url`."""
     patch_metadata(monkeypatch, make_2025_meta_df(), base_url="http://cdn/", bucket="PANBUCKET")
 
     oi = obs_mod.ObservationInfo(sequence_id="PAN007_d37295_20250407T061910")
@@ -84,15 +84,15 @@ def test_sequence_without_public_url_still_works(monkeypatch):
     ]
 
 
-def test_image_list_is_the_same_file_in_both_eras(monkeypatch):
-    """The uid-derived URL is the raw frame the old `public_url` pointed at."""
-    legacy = pd.DataFrame({
+def test_image_list_matches_the_public_url_column(monkeypatch):
+    """The uid-derived URL names the same raw frame the `public_url` column does."""
+    with_url = pd.DataFrame({
         "time": ["2018-08-24T04:01:18+00:00"],
         "uid": ["PAN012_358d0f_20180824T035917_20180824T040118"],
         "public_url": [("https://storage.googleapis.com/panoptes-images-incoming/"
                         "PAN012/358d0f/20180824T035917/20180824T040118.fits.fz")],
     })
-    patch_metadata(monkeypatch, legacy,
+    patch_metadata(monkeypatch, with_url,
                    base_url="https://storage.googleapis.com/",
                    bucket="panoptes-images-incoming")
 
@@ -102,7 +102,7 @@ def test_image_list_is_the_same_file_in_both_eras(monkeypatch):
 
 
 def test_missing_required_column_raises_named_error(monkeypatch):
-    """A missing column names the sequence rather than raising an AttributeError."""
+    """A missing column raises a ValueError naming the sequence."""
     no_uid = make_meta_df().drop(columns=["uid"])
     patch_metadata(monkeypatch, no_uid)
 

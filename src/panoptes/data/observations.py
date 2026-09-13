@@ -59,14 +59,11 @@ class ObservationInfo:
     def public_urls(self):
         """The browsable URLs carried by the metadata, if any.
 
-        Which URL columns a record carries depends on when it was written:
-        2016--2024 records have ``public_url`` and ``raw_url``, 2025 onward have
-        ``uploaded_public_url``, ``fits_public_url`` and ``jpg_public_url``.
-
-        These are for display and lookup only. Nothing here requires them --
-        the location of the raw frames comes from `get_image_list`, which
-        derives it from the ``uid`` -- so a record with no URL column at all
-        still works.
+        Which ``*_url`` columns exist varies between records: ``public_url``
+        and ``raw_url`` on some, ``uploaded_public_url``, ``fits_public_url``
+        and ``jpg_public_url`` on others. They are for display and lookup only
+        -- the raw frame locations come from `get_image_list` -- so a record
+        with no URL column at all still works.
 
         Returns:
             A DataFrame of whichever ``*_url`` columns are present, which may
@@ -95,7 +92,6 @@ class ObservationInfo:
         metadata_url = f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}'
         images_df = pd.read_csv(metadata_url)
 
-        # Fail loudly and by name rather than with an AttributeError from pandas.
         missing = [col for col in REQUIRED_COLUMNS if col not in images_df.columns]
         if missing:
             raise ValueError(
@@ -115,10 +111,9 @@ class ObservationInfo:
     def get_image_list(self, bucket: str | None = None, file_ext: str = '.fits.fz'):
         """Get the URLs of the raw images for the observation.
 
-        The URLs are built from the ``uid`` of each image rather than read from
-        a URL column of the metadata, because the URL columns have been renamed
-        at least once (`public_urls`) while the ``uid`` has not. The ``uid`` is
-        the archive path with underscores for separators, so the raw frame's
+        The URLs are built from each image's ``uid`` rather than read from a URL
+        column, which is not dependable (`public_urls`). The ``uid`` is the
+        archive path with underscores for separators, so the raw frame's
         location follows from it and the bucket.
 
         Args:
