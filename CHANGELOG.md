@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- `ObservationInfo` no longer requires a URL column in the image metadata, so
+  it works on every sequence again. It had read `public_url`, which records
+  written from 2025 onward do not carry, and raised an `AttributeError` on all
+  of them. Image URLs are now derived from the `uid`, which is present in every
+  era and is the archive path with underscores for separators.
+- A missing required metadata column now raises a `ValueError` naming the
+  sequence and listing the columns that did arrive, instead of an
+  `AttributeError` from pandas.
+- The `download` and `get-metadata` CLI commands exit non-zero when they fail,
+  instead of catching every exception and printing it in red.
+
+### Added
+
+- `ObservationInfo.public_urls`, the `*_url` columns of the metadata, for
+  display and lookup. Which ones exist depends on when the record was written;
+  nothing in the package requires any of them.
+
 ## 0.2.3 (2025-10-20)
 
 - Modernize the repo to use `pyproject.toml`.
