@@ -13,6 +13,10 @@ from panoptes.utils.images import fits as fits_utils
 
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
+# The metadata columns this class actually needs. Everything else, including
+# every URL column, is optional -- see `ObservationInfo.public_urls`.
+REQUIRED_COLUMNS = ('time', 'uid')
+
 
 class ObservationInfo:
     """A container class for information about an Observation."""
@@ -49,7 +53,26 @@ class ObservationInfo:
             self.meta = dict()
 
         self.image_metadata = self.get_metadata(query=image_query)
-        self.image_list = self.image_metadata.public_url.values
+        self.image_list = self.get_image_list()
+
+    @property
+    def public_urls(self):
+        """The browsable URLs carried by the metadata, if any.
+
+        Which URL columns a record carries depends on when it was written:
+        2016--2024 records have ``public_url`` and ``raw_url``, 2025 onward have
+        ``uploaded_public_url``, ``fits_public_url`` and ``jpg_public_url``.
+
+        These are for display and lookup only. Nothing here requires them --
+        the location of the raw frames comes from `get_image_list`, which
+        derives it from the ``uid`` -- so a record with no URL column at all
+        still works.
+
+        Returns:
+            A DataFrame of whichever ``*_url`` columns are present, which may
+            have no columns.
+        """
+        return self.image_metadata.filter(regex=r'_url$')
 
     def get_image_cutout(self, data=None, coords=None, box_size=None, *args, **kwargs):
         """Gets a Cutout2D object for the given coords and box_size."""
@@ -72,6 +95,14 @@ class ObservationInfo:
         metadata_url = f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}'
         images_df = pd.read_csv(metadata_url)
 
+        # Fail loudly and by name rather than with an AttributeError from pandas.
+        missing = [col for col in REQUIRED_COLUMNS if col not in images_df.columns]
+        if missing:
+            raise ValueError(
+                f'Metadata for {self.sequence_id} is missing required '
+                f'column(s) {missing}; got {sorted(images_df.columns)}'
+            )
+
         # Set a time index.
         images_df.time = pd.to_datetime(images_df.time)
         images_df = images_df.set_index(['time']).sort_index()
@@ -82,13 +113,19 @@ class ObservationInfo:
         return images_df
 
     def get_image_list(self, bucket: str | None = None, file_ext: str = '.fits.fz'):
-        """Get the images for the observation.
+        """Get the URLs of the raw images for the observation.
+
+        The URLs are built from the ``uid`` of each image rather than read from
+        a URL column of the metadata, because the URL columns have been renamed
+        at least once (`public_urls`) while the ``uid`` has not. The ``uid`` is
+        the archive path with underscores for separators, so the raw frame's
+        location follows from it and the bucket.
 
         Args:
              bucket: The bucket where the images are stored.
              file_ext: The file extension of the images to retrieve.
         Returns:
-            A pandas DataFrame containing the images for the observation.
+            A list of URLs, one per image in the metadata.
         """
         url_base = self._settings.img_base_url.unicode_string()
         bucket = bucket or self._settings.img_bucket

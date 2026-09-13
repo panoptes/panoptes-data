@@ -41,7 +41,10 @@ def download(sequence_id: str | None = typer.Argument(..., help='Sequence ID for
         print(f'Downloaded {len(local_files)} images to {output_dir}.')
 
     except Exception as e:
+        # Exit non-zero: swallowing this made a package-wide break read as a
+        # download problem for years.
         print(f'[red]Error downloading images for {sequence_id}: {e}')
+        raise typer.Exit(code=1) from e
 
     return local_files
 
@@ -84,6 +87,7 @@ def get_metadata(
             print(f'[green]Metadata saved to {output_fn}')
         except Exception as e:
             print(f'[red]Error downloading metadata for {sequence_id}: {e}')
+            raise typer.Exit(code=1) from e
     else:
         if unit_id is None:
             print('[red]Must provide a unit_id if not providing a sequence_id.')
@@ -120,7 +124,8 @@ def get_metadata(
             pd.concat(dfs).to_csv(output_fn)
 
         except ValueError as e:
-            print(f'Error downloading metadata for {unit_id}: {e}', fg='red')
+            print(f'[red]Error downloading metadata for {unit_id}: {e}')
+            raise typer.Exit(code=1) from e
 
     print(f'Metadata saved to [green]{output_fn}')
 
