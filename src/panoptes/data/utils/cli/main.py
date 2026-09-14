@@ -6,14 +6,14 @@ from astropy.time import Time
 from rich import print
 from tqdm import tqdm
 
-from panoptes.data.observations import ObservationInfo
+from panoptes.data.observations import IMAGES_UNAVAILABLE_MESSAGE, ObservationInfo
 from panoptes.data.search import search_observations
 from panoptes.utils.time import current_time, flatten_time
 
 app = typer.Typer(pretty_exceptions_enable=False)
 
 
-@app.command()
+@app.command(deprecated=True)
 def download(sequence_id: str | None = typer.Argument(..., help='Sequence ID for the Observation.'),
              output_dir: Path = typer.Option(
                  None,
@@ -26,25 +26,12 @@ def download(sequence_id: str | None = typer.Argument(..., help='Sequence ID for
                  help='Query for images, default \'status!="ERROR"\''
              ),
              ) -> list[str]:
-    """Downloads all FITS images for the observation."""
-    local_files = list()
+    """Deprecated: archived frames are not currently available for download.
 
-    if output_dir is None:
-        output_dir = Path(sequence_id)
-
-    print(f'Downloading images for {sequence_id} to {output_dir}.')
-
-    try:
-        obs_info = ObservationInfo(sequence_id=sequence_id, image_query=image_query)
-        print(f'Found {len(obs_info.image_metadata)} images for {sequence_id}.')
-        local_files = obs_info.download_images(output_dir=output_dir)
-        print(f'Downloaded {len(local_files)} images to {output_dir}.')
-
-    except Exception as e:
-        print(f'[red]Error downloading images for {sequence_id}: {e}')
-        raise typer.Exit(code=1) from e
-
-    return local_files
+    See `ObservationInfo.download_images` for why. Exits non-zero.
+    """
+    print(f'[red]Cannot download images for {sequence_id}: {IMAGES_UNAVAILABLE_MESSAGE}')
+    raise typer.Exit(code=1)
 
 
 @app.command()

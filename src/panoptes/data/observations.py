@@ -1,12 +1,8 @@
-import shutil
 import warnings
-from pathlib import Path
 
 import pandas as pd
 from astropy.nddata import CCDData, Cutout2D
-from astropy.utils.data import download_file
 from astropy.wcs import FITSFixedWarning
-from tqdm.auto import tqdm
 
 from panoptes.data.settings import CloudSettings
 from panoptes.utils.images import fits as fits_utils
@@ -16,6 +12,19 @@ warnings.filterwarnings('ignore', category=FITSFixedWarning)
 # The metadata columns this class actually needs. Everything else, including
 # every URL column, is optional -- see `ObservationInfo.public_urls`.
 REQUIRED_COLUMNS = ('time', 'uid')
+
+IMAGES_UNAVAILABLE_MESSAGE = (
+    'Archived frames cannot currently be downloaded. Every URL the metadata '
+    'carries points into a Google Cloud Storage bucket that no longer serves '
+    'the object anonymously, in every era of the archive, and there is no '
+    'public replacement -- see panoptes/panoptes-data#17. Frames have to be '
+    'read from a local copy of the archive; resolving a sequence against a '
+    'local archive root is panoptes/panoptes-data#19.'
+)
+
+
+class ImagesUnavailableError(RuntimeError):
+    """Raised when a frame is asked for and no fetchable source exists."""
 
 
 class ObservationInfo:
@@ -77,7 +86,13 @@ class ObservationInfo:
         return Cutout2D(ccd0, coords, box_size, copy=True)
 
     def get_image_data(self, idx=0, use_raw=True):
-        """Downloads the image data for the given index."""
+        """Reads the image data for the given index.
+
+        This reads whatever is in `image_list`, which `get_image_list` fills
+        with archive URLs that no longer serve anonymously
+        (`download_images`). It therefore only works when `image_list` has
+        been pointed at a local copy of the archive.
+        """
         data_img = self.image_list[idx]
         wcs_img = self.image_list[idx]
 
@@ -116,6 +131,11 @@ class ObservationInfo:
         archive path with underscores for separators, so the raw frame's
         location follows from it and the bucket.
 
+        These name where a frame lives in the archive; they are not fetchable.
+        Nothing serves them anonymously any more -- see `download_images`. The
+        path below the bucket is the same in a local copy of the archive, so
+        the tail of each URL is what resolves a frame locally.
+
         Args:
              bucket: The bucket where the images are stored.
              file_ext: The file extension of the images to retrieve.
@@ -137,45 +157,23 @@ class ObservationInfo:
     def download_images(self, image_list=None, output_dir=None, show_progress=True,
                         warn_on_error=True
                         ):
-        """Download the images to the output directory (by default named after the sequence_id).
+        """Deprecated: archived frames are not currently available for download.
 
-        Args:
-            image_list: A list of images to download.
-            output_dir: The directory to download the images to.
-            show_progress: Whether to show a progress bar.
-            warn_on_error: If True (default) issue a warning if an image fails to download,
-                otherwise raise an exception.
+        The URLs this class builds are still the right archive locations, and
+        `get_image_list` still returns them, but nothing serves them: they 404
+        for an anonymous caller in both the 2018 and the 2025 layout. This
+        method used to construct those URLs, fail on every one of them, and --
+        with the default ``warn_on_error`` -- return an empty list as though
+        the observation simply had no images.
+
+        It now raises instead, so a caller learns that no frame was fetched at
+        the point where the fetch was attempted.
+
+        Raises:
+            ImagesUnavailableError: always.
         """
-        output_dir = Path(output_dir or self.sequence_id)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        image_list = image_list or self.image_list
-        print(f'Downloading {len(image_list)} images to {output_dir}')
-
-        if show_progress:
-            img_iter = tqdm(image_list)
-        else:
-            img_iter = image_list
-
-        img_paths = list()
-        for img in img_iter:
-            if show_progress:
-                img_iter.set_description(f'Downloading {img}')
-            else:
-                print(f'Downloading {img}')
-
-            try:
-                fn = Path(download_file(img, show_progress=False))
-                new_fn = output_dir / Path(img).name
-                shutil.move(fn, new_fn)
-                img_paths.append(str(new_fn))
-            except Exception as e:
-                if warn_on_error:
-                    warnings.warn(f'Failed to download {img}: {e}')
-                else:
-                    raise e
-
-        return img_paths
+        warnings.warn(IMAGES_UNAVAILABLE_MESSAGE, DeprecationWarning, stacklevel=2)
+        raise ImagesUnavailableError(IMAGES_UNAVAILABLE_MESSAGE)
 
     def __str__(self):
         return f'Obs: seq_id={self.sequence_id} num_images={len(self.image_list)}'

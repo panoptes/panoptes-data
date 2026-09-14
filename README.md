@@ -56,15 +56,21 @@ Name: 6121, dtype: object
 
 ### Downloading images
 
-The `ObservationInfo` object makes it easy to download the files:
+Not currently possible. Every frame URL the archive metadata carries points into
+a Google Cloud Storage bucket that no longer serves the object anonymously, and
+there is no public replacement, so `ObservationInfo.download_images()` raises
+rather than returning an empty list ([#17][issue-17]). Frames are read from a
+local copy of the archive; resolving a sequence against one is [#19][issue-19].
 
-```py
-obs_info.download_images()
-```
+`obs_info.image_list` still names where each frame lives in the archive. Those
+paths are the same below the bucket in a local copy.
+
+[issue-17]: https://github.com/panoptes/panoptes-data/issues/17
+[issue-19]: https://github.com/panoptes/panoptes-data/issues/19
 
 ### Command-line tools
 
-There is a simple command line tool that allows for both searching and downloading of images and metadata.
+There is a simple command line tool that allows for both searching of observations and downloading of metadata.
 
 #### Search for observations:
 
@@ -83,12 +89,6 @@ Example table output:
 | PAN019_c623e9_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   89.0222 |            8012 | 2022-01-14 08:57:22+00:00 |
 | PAN019_c623e9_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   89.019  |            9347 | 2022-01-15 08:21:08+00:00 |
 | PAN019_42433a_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   90.0095 |            9451 | 2022-01-15 08:21:08+00:00 |
-```
-
-#### Downloading all images for an observation:
-
-```bash
-panoptes-data download PAN022_977c86_20220108T090553
 ```
 
 #### Get all metadata for a unit in a given date range:
