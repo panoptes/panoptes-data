@@ -38,7 +38,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="../_static/documentation_options.js?v=0923eb50"></script>
+    <script src="../_static/documentation_options.js?v=f4fe9d32"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/panoptes.data';</script>
@@ -48,7 +48,7 @@
     <link rel="prev" title="panoptes namespace" href="panoptes.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
+  <meta name="docsearch:version" content="0.3.1.dev2+g59f3cefad" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -450,33 +450,60 @@ the point where the fetch was attempted.</p>
 <dt class="sig sig-object py" id="panoptes.data.observations.ObservationInfo.get_image_data">
 <span class="sig-name descname"><span class="pre">get_image_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_raw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/observations.html#ObservationInfo.get_image_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.observations.ObservationInfo.get_image_data" title="Link to this definition">#</a></dt>
 <dd><p>Reads the image data for the given index.</p>
-<p>This reads whatever is in <cite>image_list</cite>, which <cite>get_image_list</cite> fills
-with archive URLs that no longer serve anonymously
-(<cite>download_images</cite>). It therefore only works when <cite>image_list</cite> has
-been pointed at a local copy of the archive.</p>
+<p>This reads whatever is in <cite>image_list</cite>. With an archive root
+configured those are local files and this works; without one they are
+archive URLs that no longer serve anonymously (<cite>download_images</cite>) and
+the read fails. See <cite>get_image_list</cite>.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="panoptes.data.observations.ObservationInfo.get_image_list">
-<span class="sig-name descname"><span class="pre">get_image_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.12/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_ext</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.12/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.fits.fz'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/observations.html#ObservationInfo.get_image_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.observations.ObservationInfo.get_image_list" title="Link to this definition">#</a></dt>
-<dd><p>Get the URLs of the raw images for the observation.</p>
-<p>The URLs are built from each image’s <code class="docutils literal notranslate"><span class="pre">uid</span></code> rather than read from a URL
-column, which is not dependable (<cite>public_urls</cite>). The <code class="docutils literal notranslate"><span class="pre">uid</span></code> is the
-archive path with underscores for separators, so the raw frame’s
-location follows from it and the bucket.</p>
-<p>These name where a frame lives in the archive; they are not fetchable.
-Nothing serves them anonymously any more – see <cite>download_images</cite>. The
-path below the bucket is the same in a local copy of the archive, so
-the tail of each URL is what resolves a frame locally.</p>
+<span class="sig-name descname"><span class="pre">get_image_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bucket</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.12/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_ext</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.12/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'.fits.fz'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">archive_root</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference external" href="https://docs.python.org/3.12/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/observations.html#ObservationInfo.get_image_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.observations.ObservationInfo.get_image_list" title="Link to this definition">#</a></dt>
+<dd><p>Resolve the observation’s raw frames to where they can be read.</p>
+<p>Each frame’s location is derived from its <code class="docutils literal notranslate"><span class="pre">uid</span></code> rather than read
+from a URL column, which is not dependable (<cite>public_urls</cite>). The
+<code class="docutils literal notranslate"><span class="pre">uid</span></code> is the archive path with underscores for separators, so
+<cite>ImagePathInfo</cite> parses it and rebuilds the path below the bucket:
+<code class="docutils literal notranslate"><span class="pre">PAN012/358d0f/20180824T035917/20180824T040118.fits.fz</span></code>.</p>
+<p>That path is the same in a local copy of the archive, which is what
+makes both cases one derivation:</p>
+<ul class="simple">
+<li><p><strong>With an archive root</strong> – configured by <code class="docutils literal notranslate"><span class="pre">PANOPTES_ARCHIVE_ROOT</span></code>
+or passed here – the list holds <cite>Path</cite> objects under that root, and
+<cite>get_image_data</cite> can read them. The root points at the directory
+holding the unit folders, so <code class="docutils literal notranslate"><span class="pre">&lt;root&gt;/PAN012/358d0f/...</span></code>; the
+bucket name is a cloud-era detail and does not appear in it.</p></li>
+<li><p><strong>Without one</strong>, the list holds archive URLs. They name where each
+frame lives but nothing serves them (<cite>download_images</cite>), so this is
+a description of the archive, not a way into it.</p></li>
+</ul>
+<p>Every frame named by the metadata must exist under the root. A partial
+archive raises rather than returning a shorter list, because a
+silently shorter list reads as an observation with fewer frames rather
+than as an incomplete copy. Pass no root – or use <cite>get_metadata</cite>
+directly – to inspect a sequence whose frames are not all on hand.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>bucket</strong> – The bucket where the images are stored.</p></li>
-<li><p><strong>file_ext</strong> – The file extension of the images to retrieve.</p></li>
+<li><p><strong>bucket</strong> – The bucket the URLs are built against. Ignored when an
+archive root is in play, which is what keeps the bucket name
+out of local paths.</p></li>
+<li><p><strong>file_ext</strong> – The file extension of the images to retrieve. Matched
+exactly against the local archive: the layout there is the
+bucket’s layout, and the extension is part of it.</p></li>
+<li><p><strong>archive_root</strong> – A local copy of the archive, overriding the
+<code class="docutils literal notranslate"><span class="pre">archive_root</span></code> setting for this call.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A list of URLs, one per image in the metadata.</p>
+<dd class="field-even"><p>A list of <cite>Path</cite> under an archive root, or of URL strings without
+one, in metadata order and one per image.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3.12/library/exceptions.html#ValueError" title="(in Python v3.12)"><strong>ValueError</strong></a> – if a <code class="docutils literal notranslate"><span class="pre">uid</span></code> is not a well-formed archive path.</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3.12/library/exceptions.html#FileNotFoundError" title="(in Python v3.12)"><strong>FileNotFoundError</strong></a> – if a frame is missing from the local archive.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -511,11 +538,11 @@ have no columns.</p>
 <span id="panoptes-data-search-module"></span><h2>panoptes.data.search module<a class="headerlink" href="#module-panoptes.data.search" title="Link to this heading">#</a></h2>
 <dl class="py function">
 <dt class="sig sig-object py" id="panoptes.data.search.get_all_observations">
-<span class="sig-prename descclassname"><span class="pre">panoptes.data.search.</span></span><span class="sig-name descname"><span class="pre">get_all_observations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#panoptes.data.settings.CloudSettings" title="panoptes.data.settings.CloudSettings"><span class="pre">CloudSettings</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><span class="pre">DataFrame</span></a></span></span><a class="reference internal" href="../_modules/panoptes/data/search.html#get_all_observations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.search.get_all_observations" title="Link to this definition">#</a></dt>
+<span class="sig-prename descclassname"><span class="pre">panoptes.data.search.</span></span><span class="sig-name descname"><span class="pre">get_all_observations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">settings</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#panoptes.data.settings.SurveySettings" title="panoptes.data.settings.SurveySettings"><span class="pre">SurveySettings</span></a></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference external" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html#pandas.DataFrame" title="(in pandas v3.0.5)"><span class="pre">DataFrame</span></a></span></span><a class="reference internal" href="../_modules/panoptes/data/search.html#get_all_observations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.search.get_all_observations" title="Link to this definition">#</a></dt>
 <dd><p>Get all the observations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>settings</strong> (<a class="reference internal" href="#panoptes.data.settings.CloudSettings" title="panoptes.data.settings.CloudSettings"><em>CloudSettings</em></a><em>, </em><em>optional</em>) – The settings to use for the observations.
+<dd class="field-odd"><p><strong>settings</strong> (<a class="reference internal" href="#panoptes.data.settings.SurveySettings" title="panoptes.data.settings.SurveySettings"><em>SurveySettings</em></a><em>, </em><em>optional</em>) – The settings to use for the observations.
 Defaults to None.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -611,32 +638,6 @@ If <cite>None</cite> (default) then the <cite>source_url</cite> will be used to 
 </section>
 <section id="module-panoptes.data.settings">
 <span id="panoptes-data-settings-module"></span><h2>panoptes.data.settings module<a class="headerlink" href="#module-panoptes.data.settings" title="Link to this heading">#</a></h2>
-<dl class="py class">
-<dt class="sig sig-object py" id="panoptes.data.settings.CloudSettings">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">panoptes.data.settings.</span></span><span class="sig-name descname"><span class="pre">CloudSettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/settings.html#CloudSettings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.settings.CloudSettings" title="Link to this definition">#</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseSettings</span></code></p>
-<dl class="py attribute">
-<dt class="sig sig-object py" id="panoptes.data.settings.CloudSettings.img_base_url">
-<span class="sig-name descname"><span class="pre">img_base_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pydantic.networks.AnyHttpUrl</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://storage.googleapis.com'</span></span><a class="headerlink" href="#panoptes.data.settings.CloudSettings.img_base_url" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="panoptes.data.settings.CloudSettings.img_bucket">
-<span class="sig-name descname"><span class="pre">img_bucket</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'panoptes-images-incoming'</span></span><a class="headerlink" href="#panoptes.data.settings.CloudSettings.img_bucket" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="panoptes.data.settings.CloudSettings.img_metadata_url">
-<span class="sig-name descname"><span class="pre">img_metadata_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pydantic.networks.AnyHttpUrl</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://us-central1-project-panoptes-01.cloudfunctions.net/get-observation-info'</span></span><a class="headerlink" href="#panoptes.data.settings.CloudSettings.img_metadata_url" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="panoptes.data.settings.CloudSettings.observations_url">
-<span class="sig-name descname"><span class="pre">observations_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pydantic.networks.AnyHttpUrl</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://storage.googleapis.com/panoptes-assets/observations.csv'</span></span><a class="headerlink" href="#panoptes.data.settings.CloudSettings.observations_url" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 <dl class="py class">
 <dt class="sig sig-object py" id="panoptes.data.settings.ImageStatus">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">panoptes.data.settings.</span></span><span class="sig-name descname"><span class="pre">ImageStatus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/settings.html#ImageStatus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.settings.ImageStatus" title="Link to this definition">#</a></dt>
@@ -781,6 +782,55 @@ If <cite>None</cite> (default) then the <cite>source_url</cite> will be used to 
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="panoptes.data.settings.SurveySettings">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">panoptes.data.settings.</span></span><span class="sig-name descname"><span class="pre">SurveySettings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/settings.html#SurveySettings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.settings.SurveySettings" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseSettings</span></code></p>
+<p>Where the survey’s data lives.</p>
+<p>Every field names a <em>location</em>, and each is configured from the
+environment with a <code class="docutils literal notranslate"><span class="pre">PANOPTES_</span></code> prefix, e.g. <code class="docutils literal notranslate"><span class="pre">PANOPTES_ARCHIVE_ROOT</span></code>.</p>
+<p>The URL fields describe the cloud archive as it was laid out. Nothing
+serves those objects anonymously any more
+(<cite>ObservationInfo.download_images</cite>), so they name where a frame lives
+rather than somewhere to fetch it from. <cite>archive_root</cite> is how a frame is
+actually read: point it at a local copy of the archive and
+<cite>ObservationInfo.get_image_list</cite> resolves a sequence to files on disk.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in the working directory is read as well, so the archive
+root can be checked out beside a project rather than exported in every
+shell. A real environment variable wins over the file, and an explicit
+argument wins over both.</p>
+<p>Keys that are not settings of this class are ignored rather than rejected,
+because a <code class="docutils literal notranslate"><span class="pre">.env</span></code> is usually shared with other tools and a
+<code class="docutils literal notranslate"><span class="pre">DATABASE_URL</span></code> in it must not stop a frame being read. The cost is that a
+misspelled <code class="docutils literal notranslate"><span class="pre">PANOPTES_*</span></code> key is ignored too, so a setting that appears not
+to take effect is worth checking for a typo.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="panoptes.data.settings.SurveySettings.archive_root">
+<span class="sig-name descname"><span class="pre">archive_root</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/pathlib.html#pathlib.Path" title="(in Python v3.12)"><span class="pre">Path</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/constants.html#None" title="(in Python v3.12)"><span class="pre">None</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></span><a class="headerlink" href="#panoptes.data.settings.SurveySettings.archive_root" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="panoptes.data.settings.SurveySettings.img_base_url">
+<span class="sig-name descname"><span class="pre">img_base_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pydantic.networks.AnyHttpUrl</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://storage.googleapis.com'</span></span><a class="headerlink" href="#panoptes.data.settings.SurveySettings.img_base_url" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="panoptes.data.settings.SurveySettings.img_bucket">
+<span class="sig-name descname"><span class="pre">img_bucket</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3.12/library/stdtypes.html#str" title="(in Python v3.12)"><span class="pre">str</span></a></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'panoptes-images-incoming'</span></span><a class="headerlink" href="#panoptes.data.settings.SurveySettings.img_bucket" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="panoptes.data.settings.SurveySettings.img_metadata_url">
+<span class="sig-name descname"><span class="pre">img_metadata_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pydantic.networks.AnyHttpUrl</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://us-central1-project-panoptes-01.cloudfunctions.net/get-observation-info'</span></span><a class="headerlink" href="#panoptes.data.settings.SurveySettings.img_metadata_url" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="panoptes.data.settings.SurveySettings.observations_url">
+<span class="sig-name descname"><span class="pre">observations_url</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">pydantic.networks.AnyHttpUrl</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'https://storage.googleapis.com/panoptes-assets/observations.csv'</span></span><a class="headerlink" href="#panoptes.data.settings.SurveySettings.observations_url" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="module-panoptes.data">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-panoptes.data" title="Link to this heading">#</a></h2>
@@ -846,13 +896,6 @@ If <cite>None</cite> (default) then the <cite>source_url</cite> will be used to 
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-panoptes.data.settings">panoptes.data.settings module</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.CloudSettings"><code class="docutils literal notranslate"><span class="pre">CloudSettings</span></code></a><ul class="nav section-nav flex-column">
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.CloudSettings.img_base_url"><code class="docutils literal notranslate"><span class="pre">CloudSettings.img_base_url</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.CloudSettings.img_bucket"><code class="docutils literal notranslate"><span class="pre">CloudSettings.img_bucket</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.CloudSettings.img_metadata_url"><code class="docutils literal notranslate"><span class="pre">CloudSettings.img_metadata_url</span></code></a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.CloudSettings.observations_url"><code class="docutils literal notranslate"><span class="pre">CloudSettings.observations_url</span></code></a></li>
-</ul>
-</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.ImageStatus"><code class="docutils literal notranslate"><span class="pre">ImageStatus</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.ImageStatus.CALIBRATED"><code class="docutils literal notranslate"><span class="pre">ImageStatus.CALIBRATED</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.ImageStatus.CALIBRATING"><code class="docutils literal notranslate"><span class="pre">ImageStatus.CALIBRATING</span></code></a></li>
@@ -883,6 +926,14 @@ If <cite>None</cite> (default) then the <cite>source_url</cite> will be used to 
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.ObservationStatus.RECEIVED"><code class="docutils literal notranslate"><span class="pre">ObservationStatus.RECEIVED</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.ObservationStatus.RECEIVING"><code class="docutils literal notranslate"><span class="pre">ObservationStatus.RECEIVING</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.ObservationStatus.UNKNOWN"><code class="docutils literal notranslate"><span class="pre">ObservationStatus.UNKNOWN</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.SurveySettings"><code class="docutils literal notranslate"><span class="pre">SurveySettings</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.SurveySettings.archive_root"><code class="docutils literal notranslate"><span class="pre">SurveySettings.archive_root</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.SurveySettings.img_base_url"><code class="docutils literal notranslate"><span class="pre">SurveySettings.img_base_url</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.SurveySettings.img_bucket"><code class="docutils literal notranslate"><span class="pre">SurveySettings.img_bucket</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.SurveySettings.img_metadata_url"><code class="docutils literal notranslate"><span class="pre">SurveySettings.img_metadata_url</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.settings.SurveySettings.observations_url"><code class="docutils literal notranslate"><span class="pre">SurveySettings.observations_url</span></code></a></li>
 </ul>
 </li>
 </ul>

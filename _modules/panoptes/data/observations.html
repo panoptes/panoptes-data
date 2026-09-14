@@ -37,7 +37,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="../../../_static/documentation_options.js?v=0923eb50"></script>
+    <script src="../../../_static/documentation_options.js?v=f4fe9d32"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/panoptes/data/observations';</script>
@@ -46,7 +46,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
+  <meta name="docsearch:version" content="0.3.1.dev2+g59f3cefad" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -374,13 +374,15 @@
                   
   <h1>Source code for panoptes.data.observations</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">astropy.nddata</span><span class="w"> </span><span class="kn">import</span> <span class="n">CCDData</span><span class="p">,</span> <span class="n">Cutout2D</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">astropy.wcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">FITSFixedWarning</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.data.settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">CloudSettings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.data.settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">SurveySettings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.utils.images</span><span class="w"> </span><span class="kn">import</span> <span class="n">fits</span> <span class="k">as</span> <span class="n">fits_utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.utils.images.fits</span><span class="w"> </span><span class="kn">import</span> <span class="n">ImagePathInfo</span>
 
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">'ignore'</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="n">FITSFixedWarning</span><span class="p">)</span>
 
@@ -389,12 +391,13 @@
 <span class="n">REQUIRED_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'time'</span><span class="p">,</span> <span class="s1">'uid'</span><span class="p">)</span>
 
 <span class="n">IMAGES_UNAVAILABLE_MESSAGE</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="s1">'Archived frames cannot currently be downloaded. Every URL the metadata '</span>
-    <span class="s1">'carries points into a Google Cloud Storage bucket that no longer serves '</span>
-    <span class="s1">'the object anonymously, in every era of the archive, and there is no '</span>
-    <span class="s1">'public replacement -- see panoptes/panoptes-data#17. Frames have to be '</span>
-    <span class="s1">'read from a local copy of the archive; resolving a sequence against a '</span>
-    <span class="s1">'local archive root is panoptes/panoptes-data#19.'</span>
+    <span class="s1">'Archived frames cannot be downloaded. Every URL the metadata carries '</span>
+    <span class="s1">'points into a Google Cloud Storage bucket that no longer serves the '</span>
+    <span class="s1">'object anonymously, in every era of the archive, and there is no public '</span>
+    <span class="s1">'replacement -- see panoptes/panoptes-data#17. Frames are read from a '</span>
+    <span class="s1">'local copy of the archive instead: set PANOPTES_ARCHIVE_ROOT to the '</span>
+    <span class="s1">'directory holding the unit folders and `get_image_list` resolves the '</span>
+    <span class="s1">'sequence to files on disk.'</span>
 <span class="p">)</span>
 
 
@@ -414,8 +417,13 @@
 <span class="w">        </span><span class="sd">"""Initialize the observation info with a sequence_id.</span>
 
 <span class="sd">        This object will be populated with information about the observation, including</span>
-<span class="sd">        image metadata and links to raw and processed images. It is mostly a convenience</span>
+<span class="sd">        image metadata and the location of each raw frame. It is mostly a convenience</span>
 <span class="sd">        class for accessing information about an observation.</span>
+
+<span class="sd">        Where the frames resolve to depends on whether an archive root is</span>
+<span class="sd">        configured -- see `get_image_list`. With one, constructing this class</span>
+<span class="sd">        also asserts that every frame of the sequence is present in that local</span>
+<span class="sd">        copy.</span>
 
 <span class="sd">        Example:</span>
 
@@ -432,7 +440,7 @@
 <span class="sd">            meta: A dictionary of metadata for the observation.</span>
 <span class="sd">            image_query: A query string to use when querying for images, e.g. 'status != "ERROR"'</span>
 <span class="sd">        """</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span> <span class="o">=</span> <span class="n">CloudSettings</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span> <span class="o">=</span> <span class="n">SurveySettings</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">meta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sequence_id</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">sequence_id</span>
@@ -473,10 +481,10 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">get_image_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">use_raw</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">"""Reads the image data for the given index.</span>
 
-<span class="sd">        This reads whatever is in `image_list`, which `get_image_list` fills</span>
-<span class="sd">        with archive URLs that no longer serve anonymously</span>
-<span class="sd">        (`download_images`). It therefore only works when `image_list` has</span>
-<span class="sd">        been pointed at a local copy of the archive.</span>
+<span class="sd">        This reads whatever is in `image_list`. With an archive root</span>
+<span class="sd">        configured those are local files and this works; without one they are</span>
+<span class="sd">        archive URLs that no longer serve anonymously (`download_images`) and</span>
+<span class="sd">        the read fails. See `get_image_list`.</span>
 <span class="sd">        """</span>
         <span class="n">data_img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_list</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
         <span class="n">wcs_img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_list</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
@@ -514,37 +522,98 @@
 
 <div class="viewcode-block" id="ObservationInfo.get_image_list">
 <a class="viewcode-back" href="../../../api/panoptes.data.html#panoptes.data.observations.ObservationInfo.get_image_list">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">get_image_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">file_ext</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'.fits.fz'</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""Get the URLs of the raw images for the observation.</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_image_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">file_ext</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'.fits.fz'</span><span class="p">,</span>
+                       <span class="n">archive_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Resolve the observation's raw frames to where they can be read.</span>
 
-<span class="sd">        The URLs are built from each image's ``uid`` rather than read from a URL</span>
-<span class="sd">        column, which is not dependable (`public_urls`). The ``uid`` is the</span>
-<span class="sd">        archive path with underscores for separators, so the raw frame's</span>
-<span class="sd">        location follows from it and the bucket.</span>
+<span class="sd">        Each frame's location is derived from its ``uid`` rather than read</span>
+<span class="sd">        from a URL column, which is not dependable (`public_urls`). The</span>
+<span class="sd">        ``uid`` is the archive path with underscores for separators, so</span>
+<span class="sd">        `ImagePathInfo` parses it and rebuilds the path below the bucket:</span>
+<span class="sd">        ``PAN012/358d0f/20180824T035917/20180824T040118.fits.fz``.</span>
 
-<span class="sd">        These name where a frame lives in the archive; they are not fetchable.</span>
-<span class="sd">        Nothing serves them anonymously any more -- see `download_images`. The</span>
-<span class="sd">        path below the bucket is the same in a local copy of the archive, so</span>
-<span class="sd">        the tail of each URL is what resolves a frame locally.</span>
+<span class="sd">        That path is the same in a local copy of the archive, which is what</span>
+<span class="sd">        makes both cases one derivation:</span>
+
+<span class="sd">        * **With an archive root** -- configured by ``PANOPTES_ARCHIVE_ROOT``</span>
+<span class="sd">          or passed here -- the list holds `Path` objects under that root, and</span>
+<span class="sd">          `get_image_data` can read them. The root points at the directory</span>
+<span class="sd">          holding the unit folders, so ``&lt;root&gt;/PAN012/358d0f/...``; the</span>
+<span class="sd">          bucket name is a cloud-era detail and does not appear in it.</span>
+<span class="sd">        * **Without one**, the list holds archive URLs. They name where each</span>
+<span class="sd">          frame lives but nothing serves them (`download_images`), so this is</span>
+<span class="sd">          a description of the archive, not a way into it.</span>
+
+<span class="sd">        Every frame named by the metadata must exist under the root. A partial</span>
+<span class="sd">        archive raises rather than returning a shorter list, because a</span>
+<span class="sd">        silently shorter list reads as an observation with fewer frames rather</span>
+<span class="sd">        than as an incomplete copy. Pass no root -- or use `get_metadata`</span>
+<span class="sd">        directly -- to inspect a sequence whose frames are not all on hand.</span>
 
 <span class="sd">        Args:</span>
-<span class="sd">             bucket: The bucket where the images are stored.</span>
-<span class="sd">             file_ext: The file extension of the images to retrieve.</span>
+<span class="sd">             bucket: The bucket the URLs are built against. Ignored when an</span>
+<span class="sd">                archive root is in play, which is what keeps the bucket name</span>
+<span class="sd">                out of local paths.</span>
+<span class="sd">             file_ext: The file extension of the images to retrieve. Matched</span>
+<span class="sd">                exactly against the local archive: the layout there is the</span>
+<span class="sd">                bucket's layout, and the extension is part of it.</span>
+<span class="sd">             archive_root: A local copy of the archive, overriding the</span>
+<span class="sd">                ``archive_root`` setting for this call.</span>
 <span class="sd">        Returns:</span>
-<span class="sd">            A list of URLs, one per image in the metadata.</span>
-<span class="sd">        """</span>
-        <span class="n">url_base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span><span class="o">.</span><span class="n">img_base_url</span><span class="o">.</span><span class="n">unicode_string</span><span class="p">()</span>
-        <span class="n">bucket</span> <span class="o">=</span> <span class="n">bucket</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span><span class="o">.</span><span class="n">img_bucket</span>
+<span class="sd">            A list of `Path` under an archive root, or of URL strings without</span>
+<span class="sd">            one, in metadata order and one per image.</span>
 
-        <span class="c1"># Build up the image list from the metadata.</span>
-        <span class="n">image_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">url_base</span>
-                      <span class="o">+</span> <span class="n">bucket</span> <span class="o">+</span> <span class="s1">'/'</span>
-                      <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"_"</span><span class="p">,</span> <span class="s2">"/"</span><span class="p">)</span>
-                      <span class="o">+</span> <span class="n">file_ext</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span>
-                      <span class="bp">self</span><span class="o">.</span><span class="n">image_metadata</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">values</span><span class="p">]</span>
+<span class="sd">        Raises:</span>
+<span class="sd">            ValueError: if a ``uid`` is not a well-formed archive path.</span>
+<span class="sd">            FileNotFoundError: if a frame is missing from the local archive.</span>
+<span class="sd">        """</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="n">file_ext</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s1">'.'</span><span class="p">)</span>
+        <span class="n">relative_paths</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_frame_path</span><span class="p">(</span><span class="n">uid</span><span class="p">,</span> <span class="n">ext</span><span class="p">)</span> <span class="k">for</span> <span class="n">uid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_metadata</span><span class="o">.</span><span class="n">uid</span><span class="o">.</span><span class="n">values</span><span class="p">]</span>
+
+        <span class="n">archive_root</span> <span class="o">=</span> <span class="n">archive_root</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span><span class="o">.</span><span class="n">archive_root</span>
+        <span class="k">if</span> <span class="n">archive_root</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">url_base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span><span class="o">.</span><span class="n">img_base_url</span><span class="o">.</span><span class="n">unicode_string</span><span class="p">()</span>
+            <span class="n">bucket</span> <span class="o">=</span> <span class="n">bucket</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_settings</span><span class="o">.</span><span class="n">img_bucket</span>
+            <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">url_base</span><span class="si">}{</span><span class="n">bucket</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s1">'</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">relative_paths</span><span class="p">]</span>
+
+        <span class="n">archive_root</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">archive_root</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">archive_root</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">'The archive root </span><span class="si">{</span><span class="n">archive_root</span><span class="si">}</span><span class="s1"> is not a directory, so no '</span>
+                <span class="sa">f</span><span class="s1">'frame of </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_id</span><span class="si">}</span><span class="s1"> can be located. It should point '</span>
+                <span class="sa">f</span><span class="s1">'at the directory holding the unit folders, e.g. '</span>
+                <span class="sa">f</span><span class="s1">'&lt;root&gt;/PAN012/358d0f/20180824T035917/.'</span>
+            <span class="p">)</span>
+
+        <span class="n">image_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">archive_root</span> <span class="o">/</span> <span class="n">path</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">relative_paths</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">image_path</span> <span class="ow">in</span> <span class="n">image_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">image_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">'Frame </span><span class="si">{</span><span class="n">image_path</span><span class="si">}</span><span class="s1"> is named by the metadata for '</span>
+                    <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_id</span><span class="si">}</span><span class="s1"> but is not in the local archive at '</span>
+                    <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="n">archive_root</span><span class="si">}</span><span class="s1">. The copy is incomplete for this sequence.'</span>
+                <span class="p">)</span>
 
         <span class="k">return</span> <span class="n">image_list</span></div>
 
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_frame_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">uid</span><span class="p">,</span> <span class="n">ext</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""The archive-relative path of one frame, from its ``uid``.</span>
+
+<span class="sd">        The ``uid`` is the archive path with underscores for separators, so</span>
+<span class="sd">        `ImagePathInfo` both validates it and rebuilds the path.</span>
+<span class="sd">        """</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">path_info</span> <span class="o">=</span> <span class="n">ImagePathInfo</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">uid</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">'_'</span><span class="p">,</span> <span class="s1">'/'</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">'Image uid </span><span class="si">{</span><span class="n">uid</span><span class="si">!r}</span><span class="s1"> in the metadata for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence_id</span><span class="si">}</span><span class="s1"> is '</span>
+                <span class="sa">f</span><span class="s1">'not a well-formed archive path, so the frame cannot be '</span>
+                <span class="sa">f</span><span class="s1">'located: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">'</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+        <span class="k">return</span> <span class="n">path_info</span><span class="o">.</span><span class="n">as_path</span><span class="p">(</span><span class="n">ext</span><span class="o">=</span><span class="n">ext</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ObservationInfo.download_images">
 <a class="viewcode-back" href="../../../api/panoptes.data.html#panoptes.data.observations.ObservationInfo.download_images">[docs]</a>

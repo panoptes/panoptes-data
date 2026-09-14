@@ -37,7 +37,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="../../../_static/documentation_options.js?v=0923eb50"></script>
+    <script src="../../../_static/documentation_options.js?v=f4fe9d32"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/panoptes/data/settings';</script>
@@ -46,7 +46,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
+  <meta name="docsearch:version" content="0.3.1.dev2+g59f3cefad" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -374,14 +374,47 @@
                   
   <h1>Source code for panoptes.data.settings</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntEnum</span><span class="p">,</span> <span class="n">auto</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">pydantic.networks</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnyHttpUrl</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic_settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSettings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pydantic_settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseSettings</span><span class="p">,</span> <span class="n">SettingsConfigDict</span>
 
 
-<div class="viewcode-block" id="CloudSettings">
-<a class="viewcode-back" href="../../../api/panoptes.data.html#panoptes.data.settings.CloudSettings">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">CloudSettings</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<div class="viewcode-block" id="SurveySettings">
+<a class="viewcode-back" href="../../../api/panoptes.data.html#panoptes.data.settings.SurveySettings">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SurveySettings</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Where the survey's data lives.</span>
+
+<span class="sd">    Every field names a *location*, and each is configured from the</span>
+<span class="sd">    environment with a ``PANOPTES_`` prefix, e.g. ``PANOPTES_ARCHIVE_ROOT``.</span>
+
+<span class="sd">    The URL fields describe the cloud archive as it was laid out. Nothing</span>
+<span class="sd">    serves those objects anonymously any more</span>
+<span class="sd">    (`ObservationInfo.download_images`), so they name where a frame lives</span>
+<span class="sd">    rather than somewhere to fetch it from. `archive_root` is how a frame is</span>
+<span class="sd">    actually read: point it at a local copy of the archive and</span>
+<span class="sd">    `ObservationInfo.get_image_list` resolves a sequence to files on disk.</span>
+
+<span class="sd">    A ``.env`` file in the working directory is read as well, so the archive</span>
+<span class="sd">    root can be checked out beside a project rather than exported in every</span>
+<span class="sd">    shell. A real environment variable wins over the file, and an explicit</span>
+<span class="sd">    argument wins over both.</span>
+
+<span class="sd">    Keys that are not settings of this class are ignored rather than rejected,</span>
+<span class="sd">    because a ``.env`` is usually shared with other tools and a</span>
+<span class="sd">    ``DATABASE_URL`` in it must not stop a frame being read. The cost is that a</span>
+<span class="sd">    misspelled ``PANOPTES_*`` key is ignored too, so a setting that appears not</span>
+<span class="sd">    to take effect is worth checking for a typo.</span>
+<span class="sd">    """</span>
+
+    <span class="n">model_config</span> <span class="o">=</span> <span class="n">SettingsConfigDict</span><span class="p">(</span>
+        <span class="n">env_prefix</span><span class="o">=</span><span class="s1">'panoptes_'</span><span class="p">,</span>
+        <span class="n">env_file</span><span class="o">=</span><span class="s1">'.env'</span><span class="p">,</span>
+        <span class="n">env_file_encoding</span><span class="o">=</span><span class="s1">'utf-8'</span><span class="p">,</span>
+        <span class="n">extra</span><span class="o">=</span><span class="s1">'ignore'</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">archive_root</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">img_base_url</span><span class="p">:</span> <span class="n">AnyHttpUrl</span> <span class="o">=</span> <span class="s1">'https://storage.googleapis.com'</span>
     <span class="n">img_bucket</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">'panoptes-images-incoming'</span>
     <span class="n">img_metadata_url</span><span class="p">:</span> <span class="n">AnyHttpUrl</span> <span class="o">=</span> <span class="s1">'https://us-central1-project-panoptes-01.cloudfunctions.net/get-observation-info'</span>

@@ -38,7 +38,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="_static/documentation_options.js?v=0923eb50"></script>
+    <script src="_static/documentation_options.js?v=f4fe9d32"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'changelog';</script>
@@ -49,7 +49,7 @@
     <link rel="prev" title="Contributing" href="contributing.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
+  <meta name="docsearch:version" content="0.3.1.dev2+g59f3cefad" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -395,29 +395,74 @@
 <h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
 <section id="unreleased">
 <h2>Unreleased<a class="headerlink" href="#unreleased" title="Link to this heading">#</a></h2>
-<section id="deprecated">
-<h3>Deprecated<a class="headerlink" href="#deprecated" title="Link to this heading">#</a></h3>
+<section id="added">
+<h3>Added<a class="headerlink" href="#added" title="Link to this heading">#</a></h3>
 <ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">ObservationInfo.download_images</span></code> and the <code class="docutils literal notranslate"><span class="pre">panoptes-data</span> <span class="pre">download</span></code> CLI
-command. Archived frames are not currently downloadable: every URL the
-metadata carries points into a Google Cloud Storage bucket that no longer
-serves the object anonymously, in both the 2018 and the 2025 layout, and
-there is no public replacement. Both now raise (<code class="docutils literal notranslate"><span class="pre">ImagesUnavailableError</span></code>, and
-exit code 1 respectively) with a message saying so, instead of constructing
-correct URLs and failing on every fetch. Under the default
-<code class="docutils literal notranslate"><span class="pre">warn_on_error=True</span></code> that failure used to be swallowed into an empty list,
-which reads as an observation with no images rather than as a broken fetch.</p>
-<p>Frames are read from a local copy of the archive instead. Resolving a
-sequence against a local archive root is panoptes/panoptes-data#19.</p>
+<li><p><code class="docutils literal notranslate"><span class="pre">SurveySettings.archive_root</span></code>, set from <code class="docutils literal notranslate"><span class="pre">PANOPTES_ARCHIVE_ROOT</span></code>, names a
+local copy of the archive. It points at the directory holding the unit
+folders, so <code class="docutils literal notranslate"><span class="pre">&lt;root&gt;/PAN012/358d0f/20180824T035917/...</span></code> – the archive keeps
+the bucket’s layout, and the bucket name is absorbed by how the root is set
+rather than leaking into local paths. It has no default; without one nothing
+changes.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_image_list</span></code> accepts <code class="docutils literal notranslate"><span class="pre">archive_root</span></code> per call, overriding the setting.</p></li>
+<li><p>Settings are read from a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in the working directory as well as from
+the environment, so a machine-specific archive root can sit beside a project
+rather than being exported in every shell. A real environment variable beats
+the file and an argument beats both. <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> documents every setting.</p>
+<p>Keys that are not settings of this package are ignored rather than rejected:
+a <code class="docutils literal notranslate"><span class="pre">.env</span></code> is usually shared with other tools, and a <code class="docutils literal notranslate"><span class="pre">DATABASE_URL</span></code> in it must
+not stop a frame being read. A misspelled <code class="docutils literal notranslate"><span class="pre">PANOPTES_*</span></code> key is therefore
+ignored too.</p>
 </li>
 </ul>
 </section>
 <section id="changed">
 <h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">#</a></h3>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">get_image_list</span></code> is unchanged and still names where each frame lives; its
-docstring now says those URLs are locations rather than something fetchable.
-The path below the bucket is the same in a local copy of the archive.</p></li>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">get_image_list</span></code> returns local <code class="docutils literal notranslate"><span class="pre">Path</span></code> objects when an archive root is
+configured, and archive URLs when it is not. <code class="docutils literal notranslate"><span class="pre">get_image_data</span></code> therefore works
+again: it reads whatever that list holds, and the URLs it used to hold are
+not fetchable by anyone (panoptes/panoptes-data#17).</p>
+<p>A frame the metadata names but the local archive does not hold raises
+<code class="docutils literal notranslate"><span class="pre">FileNotFoundError</span></code> naming the path it looked for. A partial archive that
+silently returned fewer frames would read as an observation with fewer
+frames rather than as an incomplete copy. The extension is matched exactly,
+since the layout on disk is the bucket’s layout. A root that is not a
+directory at all raises separately, so a mistyped root is not reported as an
+incomplete copy.</p>
+</li>
+<li><p><strong>Breaking:</strong> <code class="docutils literal notranslate"><span class="pre">CloudSettings</span></code> is now <code class="docutils literal notranslate"><span class="pre">SurveySettings</span></code>. Every field on it
+names a location of survey data, and with a local archive root among them the
+cloud name described the transport of some of them rather than what the class
+is for.</p></li>
+<li><p><strong>Breaking:</strong> settings take a <code class="docutils literal notranslate"><span class="pre">PANOPTES_</span></code> environment prefix, so
+<code class="docutils literal notranslate"><span class="pre">IMG_BUCKET</span></code> is now <code class="docutils literal notranslate"><span class="pre">PANOPTES_IMG_BUCKET</span></code>, and likewise for
+<code class="docutils literal notranslate"><span class="pre">PANOPTES_IMG_BASE_URL</span></code>, <code class="docutils literal notranslate"><span class="pre">PANOPTES_IMG_METADATA_URL</span></code> and
+<code class="docutils literal notranslate"><span class="pre">PANOPTES_OBSERVATIONS_URL</span></code>. A package should not claim bare names like
+<code class="docutils literal notranslate"><span class="pre">ARCHIVE_ROOT</span></code> in a shared environment, and the same names now have to work
+inside a <code class="docutils literal notranslate"><span class="pre">.env</span></code> shared with other tools.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">python-dotenv</span></code> is a declared dependency, for the <code class="docutils literal notranslate"><span class="pre">.env</span></code> support above.</p></li>
+<li><p>A malformed <code class="docutils literal notranslate"><span class="pre">uid</span></code> raises a <code class="docutils literal notranslate"><span class="pre">ValueError</span></code> naming the uid and the sequence.
+Frame paths are now built by <code class="docutils literal notranslate"><span class="pre">ImagePathInfo</span></code> from <code class="docutils literal notranslate"><span class="pre">panoptes-utils</span></code>, which
+parses the archive path convention and so validates the uid on the way past,
+replacing a hand-rolled <code class="docutils literal notranslate"><span class="pre">str(uid).replace(&quot;_&quot;,</span> <span class="pre">&quot;/&quot;)</span></code> that accepted anything.</p></li>
+</ul>
+</section>
+<section id="deprecated">
+<h3>Deprecated<a class="headerlink" href="#deprecated" title="Link to this heading">#</a></h3>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">ObservationInfo.download_images</span></code> and the <code class="docutils literal notranslate"><span class="pre">panoptes-data</span> <span class="pre">download</span></code> CLI
+command. Archived frames are not downloadable: every URL the metadata carries
+points into a Google Cloud Storage bucket that no longer serves the object
+anonymously, in both the 2018 and the 2025 layout, and there is no public
+replacement. Both now raise (<code class="docutils literal notranslate"><span class="pre">ImagesUnavailableError</span></code>, and exit code 1
+respectively) with a message saying so, instead of constructing correct URLs
+and failing on every fetch. Under the default <code class="docutils literal notranslate"><span class="pre">warn_on_error=True</span></code> that
+failure used to be swallowed into an empty list, which reads as an
+observation with no images rather than as a broken fetch.</p>
+<p>The message now says to set <code class="docutils literal notranslate"><span class="pre">PANOPTES_ARCHIVE_ROOT</span></code> and read the frames
+locally, which is the only way to read them.</p>
+</li>
 </ul>
 </section>
 </section>
@@ -438,8 +483,8 @@ sequence and listing the columns that did arrive, instead of an
 instead of catching every exception and printing it in red.</p></li>
 </ul>
 </section>
-<section id="added">
-<h3>Added<a class="headerlink" href="#added" title="Link to this heading">#</a></h3>
+<section id="id2">
+<h3>Added<a class="headerlink" href="#id2" title="Link to this heading">#</a></h3>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">ObservationInfo.public_urls</span></code>, the <code class="docutils literal notranslate"><span class="pre">*_url</span></code> columns of the metadata, for
 display and lookup. Which ones exist depends on when the record was written;
@@ -447,8 +492,8 @@ nothing in the package requires any of them.</p></li>
 </ul>
 </section>
 </section>
-<section id="id2">
-<h2>0.2.3 (2025-10-20)<a class="headerlink" href="#id2" title="Link to this heading">#</a></h2>
+<section id="id3">
+<h2>0.2.3 (2025-10-20)<a class="headerlink" href="#id3" title="Link to this heading">#</a></h2>
 <ul class="simple">
 <li><p>Modernize the repo to use <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code>.</p></li>
 <li><p>Update docs.</p></li>
@@ -632,16 +677,17 @@ nothing in the package requires any of them.</p></li>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#unreleased">Unreleased</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deprecated">Deprecated</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deprecated">Deprecated</a></li>
 </ul>
 </li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">0.3.0 (2026-09-13)</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">Added</a></li>
 </ul>
 </li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id2">0.2.3 (2025-10-20)</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">0.2.3 (2025-10-20)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-0-2-0-2024-10-08">Version 0.2.0 (2024-10-08)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-0-1-9-2024-10-07">Version 0.1.9 (2024-10-07)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#version-0-1-8-2024-10-07">Version 0.1.8 (2024-10-07)</a></li>
