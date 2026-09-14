@@ -1,11 +1,13 @@
 import warnings
+from pathlib import Path
 
 import pandas as pd
 from astropy.nddata import CCDData, Cutout2D
 from astropy.wcs import FITSFixedWarning
 
-from panoptes.data.settings import CloudSettings
+from panoptes.data.settings import SurveySettings
 from panoptes.utils.images import fits as fits_utils
+from panoptes.utils.images.fits import ImagePathInfo
 
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
@@ -14,12 +16,13 @@ warnings.filterwarnings('ignore', category=FITSFixedWarning)
 REQUIRED_COLUMNS = ('time', 'uid')
 
 IMAGES_UNAVAILABLE_MESSAGE = (
-    'Archived frames cannot currently be downloaded. Every URL the metadata '
-    'carries points into a Google Cloud Storage bucket that no longer serves '
-    'the object anonymously, in every era of the archive, and there is no '
-    'public replacement -- see panoptes/panoptes-data#17. Frames have to be '
-    'read from a local copy of the archive; resolving a sequence against a '
-    'local archive root is panoptes/panoptes-data#19.'
+    'Archived frames cannot be downloaded. Every URL the metadata carries '
+    'points into a Google Cloud Storage bucket that no longer serves the '
+    'object anonymously, in every era of the archive, and there is no public '
+    'replacement -- see panoptes/panoptes-data#17. Frames are read from a '
+    'local copy of the archive instead: set PANOPTES_ARCHIVE_ROOT to the '
+    'directory holding the unit folders and `get_image_list` resolves the '
+    'sequence to files on disk.'
 )
 
 
@@ -34,8 +37,13 @@ class ObservationInfo:
         """Initialize the observation info with a sequence_id.
 
         This object will be populated with information about the observation, including
-        image metadata and links to raw and processed images. It is mostly a convenience
+        image metadata and the location of each raw frame. It is mostly a convenience
         class for accessing information about an observation.
+
+        Where the frames resolve to depends on whether an archive root is
+        configured -- see `get_image_list`. With one, constructing this class
+        also asserts that every frame of the sequence is present in that local
+        copy.
 
         Example:
 
@@ -52,7 +60,7 @@ class ObservationInfo:
             meta: A dictionary of metadata for the observation.
             image_query: A query string to use when querying for images, e.g. 'status != "ERROR"'
         """
-        self._settings = CloudSettings()
+        self._settings = SurveySettings()
 
         if meta is not None:
             self.sequence_id = meta.sequence_id
@@ -88,10 +96,10 @@ class ObservationInfo:
     def get_image_data(self, idx=0, use_raw=True):
         """Reads the image data for the given index.
 
-        This reads whatever is in `image_list`, which `get_image_list` fills
-        with archive URLs that no longer serve anonymously
-        (`download_images`). It therefore only works when `image_list` has
-        been pointed at a local copy of the archive.
+        This reads whatever is in `image_list`. With an archive root
+        configured those are local files and this works; without one they are
+        archive URLs that no longer serve anonymously (`download_images`) and
+        the read fails. See `get_image_list`.
         """
         data_img = self.image_list[idx]
         wcs_img = self.image_list[idx]
@@ -123,36 +131,97 @@ class ObservationInfo:
 
         return images_df
 
-    def get_image_list(self, bucket: str | None = None, file_ext: str = '.fits.fz'):
-        """Get the URLs of the raw images for the observation.
+    def get_image_list(self, bucket: str | None = None, file_ext: str = '.fits.fz',
+                       archive_root: Path | str | None = None):
+        """Resolve the observation's raw frames to where they can be read.
 
-        The URLs are built from each image's ``uid`` rather than read from a URL
-        column, which is not dependable (`public_urls`). The ``uid`` is the
-        archive path with underscores for separators, so the raw frame's
-        location follows from it and the bucket.
+        Each frame's location is derived from its ``uid`` rather than read
+        from a URL column, which is not dependable (`public_urls`). The
+        ``uid`` is the archive path with underscores for separators, so
+        `ImagePathInfo` parses it and rebuilds the path below the bucket:
+        ``PAN012/358d0f/20180824T035917/20180824T040118.fits.fz``.
 
-        These name where a frame lives in the archive; they are not fetchable.
-        Nothing serves them anonymously any more -- see `download_images`. The
-        path below the bucket is the same in a local copy of the archive, so
-        the tail of each URL is what resolves a frame locally.
+        That path is the same in a local copy of the archive, which is what
+        makes both cases one derivation:
+
+        * **With an archive root** -- configured by ``PANOPTES_ARCHIVE_ROOT``
+          or passed here -- the list holds `Path` objects under that root, and
+          `get_image_data` can read them. The root points at the directory
+          holding the unit folders, so ``<root>/PAN012/358d0f/...``; the
+          bucket name is a cloud-era detail and does not appear in it.
+        * **Without one**, the list holds archive URLs. They name where each
+          frame lives but nothing serves them (`download_images`), so this is
+          a description of the archive, not a way into it.
+
+        Every frame named by the metadata must exist under the root. A partial
+        archive raises rather than returning a shorter list, because a
+        silently shorter list reads as an observation with fewer frames rather
+        than as an incomplete copy. Pass no root -- or use `get_metadata`
+        directly -- to inspect a sequence whose frames are not all on hand.
 
         Args:
-             bucket: The bucket where the images are stored.
-             file_ext: The file extension of the images to retrieve.
+             bucket: The bucket the URLs are built against. Ignored when an
+                archive root is in play, which is what keeps the bucket name
+                out of local paths.
+             file_ext: The file extension of the images to retrieve. Matched
+                exactly against the local archive: the layout there is the
+                bucket's layout, and the extension is part of it.
+             archive_root: A local copy of the archive, overriding the
+                ``archive_root`` setting for this call.
         Returns:
-            A list of URLs, one per image in the metadata.
-        """
-        url_base = self._settings.img_base_url.unicode_string()
-        bucket = bucket or self._settings.img_bucket
+            A list of `Path` under an archive root, or of URL strings without
+            one, in metadata order and one per image.
 
-        # Build up the image list from the metadata.
-        image_list = [url_base
-                      + bucket + '/'
-                      + str(s).replace("_", "/")
-                      + file_ext for s in
-                      self.image_metadata.uid.values]
+        Raises:
+            ValueError: if a ``uid`` is not a well-formed archive path.
+            FileNotFoundError: if a frame is missing from the local archive.
+        """
+        ext = file_ext.lstrip('.')
+        relative_paths = [self._frame_path(uid, ext) for uid in self.image_metadata.uid.values]
+
+        archive_root = archive_root or self._settings.archive_root
+        if archive_root is None:
+            url_base = self._settings.img_base_url.unicode_string()
+            bucket = bucket or self._settings.img_bucket
+            return [f'{url_base}{bucket}/{path}' for path in relative_paths]
+
+        archive_root = Path(archive_root)
+        if not archive_root.is_dir():
+            raise FileNotFoundError(
+                f'The archive root {archive_root} is not a directory, so no '
+                f'frame of {self.sequence_id} can be located. It should point '
+                f'at the directory holding the unit folders, e.g. '
+                f'<root>/PAN012/358d0f/20180824T035917/.'
+            )
+
+        image_list = [archive_root / path for path in relative_paths]
+
+        for image_path in image_list:
+            if not image_path.exists():
+                raise FileNotFoundError(
+                    f'Frame {image_path} is named by the metadata for '
+                    f'{self.sequence_id} but is not in the local archive at '
+                    f'{archive_root}. The copy is incomplete for this sequence.'
+                )
 
         return image_list
+
+    def _frame_path(self, uid, ext: str) -> Path:
+        """The archive-relative path of one frame, from its ``uid``.
+
+        The ``uid`` is the archive path with underscores for separators, so
+        `ImagePathInfo` both validates it and rebuilds the path.
+        """
+        try:
+            path_info = ImagePathInfo(path=str(uid).replace('_', '/'))
+        except ValueError as e:
+            raise ValueError(
+                f'Image uid {uid!r} in the metadata for {self.sequence_id} is '
+                f'not a well-formed archive path, so the frame cannot be '
+                f'located: {e}'
+            ) from e
+
+        return path_info.as_path(ext=ext)
 
     def download_images(self, image_list=None, output_dir=None, show_progress=True,
                         warn_on_error=True

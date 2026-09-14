@@ -34,8 +34,8 @@ def test_get_all_observations_reads_remote_csv(monkeypatch, tmp_path):
     })
     df.to_csv(csv_path, index=False)
 
-    # Monkeypatch CloudSettings and download_file
-    monkeypatch.setattr(search_mod, "CloudSettings", lambda: FakeSettings(observations_url=str(csv_path)))
+    # Monkeypatch SurveySettings and download_file
+    monkeypatch.setattr(search_mod, "SurveySettings", lambda: FakeSettings(observations_url=str(csv_path)))
     monkeypatch.setattr(search_mod, "download_file", lambda url, **kwargs: str(csv_path))
 
     out = get_all_observations()
