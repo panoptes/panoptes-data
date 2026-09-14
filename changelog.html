@@ -38,7 +38,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="_static/documentation_options.js?v=e259d695"></script>
+    <script src="_static/documentation_options.js?v=0923eb50"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'changelog';</script>
@@ -49,7 +49,7 @@
     <link rel="prev" title="Contributing" href="contributing.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.0" />
+  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -393,6 +393,34 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="changelog">
 <h1>Changelog<a class="headerlink" href="#changelog" title="Link to this heading">#</a></h1>
+<section id="unreleased">
+<h2>Unreleased<a class="headerlink" href="#unreleased" title="Link to this heading">#</a></h2>
+<section id="deprecated">
+<h3>Deprecated<a class="headerlink" href="#deprecated" title="Link to this heading">#</a></h3>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">ObservationInfo.download_images</span></code> and the <code class="docutils literal notranslate"><span class="pre">panoptes-data</span> <span class="pre">download</span></code> CLI
+command. Archived frames are not currently downloadable: every URL the
+metadata carries points into a Google Cloud Storage bucket that no longer
+serves the object anonymously, in both the 2018 and the 2025 layout, and
+there is no public replacement. Both now raise (<code class="docutils literal notranslate"><span class="pre">ImagesUnavailableError</span></code>, and
+exit code 1 respectively) with a message saying so, instead of constructing
+correct URLs and failing on every fetch. Under the default
+<code class="docutils literal notranslate"><span class="pre">warn_on_error=True</span></code> that failure used to be swallowed into an empty list,
+which reads as an observation with no images rather than as a broken fetch.</p>
+<p>Frames are read from a local copy of the archive instead. Resolving a
+sequence against a local archive root is panoptes/panoptes-data#19.</p>
+</li>
+</ul>
+</section>
+<section id="changed">
+<h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">get_image_list</span></code> is unchanged and still names where each frame lives; its
+docstring now says those URLs are locations rather than something fetchable.
+The path below the bucket is the same in a local copy of the archive.</p></li>
+</ul>
+</section>
+</section>
 <section id="id1">
 <h2>0.3.0 (2026-09-13)<a class="headerlink" href="#id1" title="Link to this heading">#</a></h2>
 <section id="fixed">
@@ -603,6 +631,11 @@ nothing in the package requires any of them.</p></li>
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="pst-show_toc_level nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#unreleased">Unreleased</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#deprecated">Deprecated</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#changed">Changed</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#id1">0.3.0 (2026-09-13)</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#fixed">Fixed</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#added">Added</a></li>

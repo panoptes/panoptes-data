@@ -38,7 +38,7 @@
   <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../_static/documentation_options.js?v=0923eb50"></script>
     <script src="../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/panoptes.data';</script>
@@ -48,7 +48,7 @@
     <link rel="prev" title="panoptes namespace" href="panoptes.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.0" />
+  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
   
     
     <script src="../_static/searchtools.js"></script>
@@ -409,6 +409,13 @@
 </section>
 <section id="module-panoptes.data.observations">
 <span id="panoptes-data-observations-module"></span><h2>panoptes.data.observations module<a class="headerlink" href="#module-panoptes.data.observations" title="Link to this heading">#</a></h2>
+<dl class="py exception">
+<dt class="sig sig-object py" id="panoptes.data.observations.ImagesUnavailableError">
+<span class="property"><span class="k"><span class="pre">exception</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">panoptes.data.observations.</span></span><span class="sig-name descname"><span class="pre">ImagesUnavailableError</span></span><a class="reference internal" href="../_modules/panoptes/data/observations.html#ImagesUnavailableError"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.observations.ImagesUnavailableError" title="Link to this definition">#</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3.12/library/exceptions.html#RuntimeError" title="(in Python v3.12)"><code class="xref py py-class docutils literal notranslate"><span class="pre">RuntimeError</span></code></a></p>
+<p>Raised when a frame is asked for and no fetchable source exists.</p>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py" id="panoptes.data.observations.ObservationInfo">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">panoptes.data.observations.</span></span><span class="sig-name descname"><span class="pre">ObservationInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">image_query</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/observations.html#ObservationInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.observations.ObservationInfo" title="Link to this definition">#</a></dt>
@@ -417,16 +424,18 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="panoptes.data.observations.ObservationInfo.download_images">
 <span class="sig-name descname"><span class="pre">download_images</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">image_list</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_progress</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warn_on_error</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/observations.html#ObservationInfo.download_images"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.observations.ObservationInfo.download_images" title="Link to this definition">#</a></dt>
-<dd><p>Download the images to the output directory (by default named after the sequence_id).</p>
+<dd><p>Deprecated: archived frames are not currently available for download.</p>
+<p>The URLs this class builds are still the right archive locations, and
+<cite>get_image_list</cite> still returns them, but nothing serves them: they 404
+for an anonymous caller in both the 2018 and the 2025 layout. This
+method used to construct those URLs, fail on every one of them, and –
+with the default <code class="docutils literal notranslate"><span class="pre">warn_on_error</span></code> – return an empty list as though
+the observation simply had no images.</p>
+<p>It now raises instead, so a caller learns that no frame was fetched at
+the point where the fetch was attempted.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>image_list</strong> – A list of images to download.</p></li>
-<li><p><strong>output_dir</strong> – The directory to download the images to.</p></li>
-<li><p><strong>show_progress</strong> – Whether to show a progress bar.</p></li>
-<li><p><strong>warn_on_error</strong> – If True (default) issue a warning if an image fails to download,
-otherwise raise an exception.</p></li>
-</ul>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#panoptes.data.observations.ImagesUnavailableError" title="panoptes.data.observations.ImagesUnavailableError"><strong>ImagesUnavailableError</strong></a> – always.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -440,7 +449,11 @@ otherwise raise an exception.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="panoptes.data.observations.ObservationInfo.get_image_data">
 <span class="sig-name descname"><span class="pre">get_image_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_raw</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/panoptes/data/observations.html#ObservationInfo.get_image_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#panoptes.data.observations.ObservationInfo.get_image_data" title="Link to this definition">#</a></dt>
-<dd><p>Downloads the image data for the given index.</p>
+<dd><p>Reads the image data for the given index.</p>
+<p>This reads whatever is in <cite>image_list</cite>, which <cite>get_image_list</cite> fills
+with archive URLs that no longer serve anonymously
+(<cite>download_images</cite>). It therefore only works when <cite>image_list</cite> has
+been pointed at a local copy of the archive.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -451,6 +464,10 @@ otherwise raise an exception.</p></li>
 column, which is not dependable (<cite>public_urls</cite>). The <code class="docutils literal notranslate"><span class="pre">uid</span></code> is the
 archive path with underscores for separators, so the raw frame’s
 location follows from it and the bucket.</p>
+<p>These name where a frame lives in the archive; they are not fetchable.
+Nothing serves them anonymously any more – see <cite>download_images</cite>. The
+path below the bucket is the same in a local copy of the archive, so
+the tail of each URL is what resolves a frame locally.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -810,6 +827,7 @@ If <cite>None</cite> (default) then the <cite>source_url</cite> will be used to 
     <ul class="pst-show_toc_level nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#submodules">Submodules</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#module-panoptes.data.observations">panoptes.data.observations module</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.observations.ImagesUnavailableError"><code class="docutils literal notranslate"><span class="pre">ImagesUnavailableError</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.observations.ObservationInfo"><code class="docutils literal notranslate"><span class="pre">ObservationInfo</span></code></a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.observations.ObservationInfo.download_images"><code class="docutils literal notranslate"><span class="pre">ObservationInfo.download_images()</span></code></a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#panoptes.data.observations.ObservationInfo.get_image_cutout"><code class="docutils literal notranslate"><span class="pre">ObservationInfo.get_image_cutout()</span></code></a></li>

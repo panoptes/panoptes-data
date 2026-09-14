@@ -38,7 +38,7 @@
   <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="_static/documentation_options.js?v=e259d695"></script>
+    <script src="_static/documentation_options.js?v=0923eb50"></script>
     <script src="_static/doctools.js?v=fd6eb6e6"></script>
     <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
@@ -48,7 +48,7 @@
     <link rel="next" title="PANOPTES Data tools" href="readme.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.0" />
+  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
   
     
     <script src="_static/searchtools.js"></script>
@@ -404,14 +404,17 @@ Name: 6121, dtype: object
 </section>
 <section id="downloading-images">
 <h3>Downloading images<a class="headerlink" href="#downloading-images" title="Link to this heading">#</a></h3>
-<p>The <code class="docutils literal notranslate"><span class="pre">ObservationInfo</span></code> object makes it easy to download the files:</p>
-<div class="highlight-py notranslate"><div class="highlight"><pre><span></span><span class="n">obs_info</span><span class="o">.</span><span class="n">download_images</span><span class="p">()</span>
-</pre></div>
-</div>
+<p>Not currently possible. Every frame URL the archive metadata carries points into
+a Google Cloud Storage bucket that no longer serves the object anonymously, and
+there is no public replacement, so <code class="docutils literal notranslate"><span class="pre">ObservationInfo.download_images()</span></code> raises
+rather than returning an empty list (<a class="reference external" href="https://github.com/panoptes/panoptes-data/issues/17">#17</a>). Frames are read from a
+local copy of the archive; resolving a sequence against one is <a class="reference external" href="https://github.com/panoptes/panoptes-data/issues/19">#19</a>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">obs_info.image_list</span></code> still names where each frame lives in the archive. Those
+paths are the same below the bucket in a local copy.</p>
 </section>
 <section id="command-line-tools">
 <h3>Command-line tools<a class="headerlink" href="#command-line-tools" title="Link to this heading">#</a></h3>
-<p>There is a simple command line tool that allows for both searching and downloading of images and metadata.</p>
+<p>There is a simple command line tool that allows for both searching of observations and downloading of metadata.</p>
 <section id="search-for-observations">
 <h4>Search for observations:<a class="headerlink" href="#search-for-observations" title="Link to this heading">#</a></h4>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>panoptes-data<span class="w"> </span>search<span class="w"> </span>--name<span class="w"> </span>M42<span class="w"> </span>--min-num-images<span class="w"> </span><span class="m">90</span>
@@ -426,12 +429,6 @@ Name: 6121, dtype: object
 | PAN019_c623e9_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   89.0222 |            8012 | 2022-01-14 08:57:22+00:00 |
 | PAN019_c623e9_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   89.019  |            9347 | 2022-01-15 08:21:08+00:00 |
 | PAN019_42433a_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   90.0095 |            9451 | 2022-01-15 08:21:08+00:00 |
-</pre></div>
-</div>
-</section>
-<section id="downloading-all-images-for-an-observation">
-<h4>Downloading all images for an observation:<a class="headerlink" href="#downloading-all-images-for-an-observation" title="Link to this heading">#</a></h4>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>panoptes-data<span class="w"> </span>download<span class="w"> </span>PAN022_977c86_20220108T090553
 </pre></div>
 </div>
 </section>
@@ -464,6 +461,7 @@ Name: 6121, dtype: object
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#unreleased">Unreleased</a></li>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#id1">0.3.0 (2026-09-13)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#id2">0.2.3 (2025-10-20)</a></li>
 <li class="toctree-l2"><a class="reference internal" href="changelog.html#version-0-2-0-2024-10-08">Version 0.2.0 (2024-10-08)</a></li>
@@ -557,7 +555,6 @@ Name: 6121, dtype: object
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#downloading-images">Downloading images</a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#command-line-tools">Command-line tools</a><ul class="nav section-nav flex-column">
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#search-for-observations">Search for observations:</a></li>
-<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#downloading-all-images-for-an-observation">Downloading all images for an observation:</a></li>
 <li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#get-all-metadata-for-a-unit-in-a-given-date-range">Get all metadata for a unit in a given date range:</a></li>
 </ul>
 </li>

@@ -37,7 +37,7 @@
   <link rel="preload" as="script" href="../../../_static/scripts/bootstrap.js?digest=cb8930eaaf36d9849b67" />
 <link rel="preload" as="script" href="../../../_static/scripts/pydata-sphinx-theme.js?digest=cb8930eaaf36d9849b67" />
 
-    <script src="../../../_static/documentation_options.js?v=e259d695"></script>
+    <script src="../../../_static/documentation_options.js?v=0923eb50"></script>
     <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
     <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = '_modules/panoptes/data/observations';</script>
@@ -46,7 +46,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-  <meta name="docsearch:version" content="0.3.0" />
+  <meta name="docsearch:version" content="0.3.1.dev1+g6cd2fb3e3" />
   
     
     <script src="../../../_static/searchtools.js"></script>
@@ -373,15 +373,11 @@
                 <article class="bd-article">
                   
   <h1>Source code for panoptes.data.observations</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">astropy.nddata</span><span class="w"> </span><span class="kn">import</span> <span class="n">CCDData</span><span class="p">,</span> <span class="n">Cutout2D</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">astropy.utils.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_file</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">astropy.wcs</span><span class="w"> </span><span class="kn">import</span> <span class="n">FITSFixedWarning</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm.auto</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.data.settings</span><span class="w"> </span><span class="kn">import</span> <span class="n">CloudSettings</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">panoptes.utils.images</span><span class="w"> </span><span class="kn">import</span> <span class="n">fits</span> <span class="k">as</span> <span class="n">fits_utils</span>
@@ -391,6 +387,22 @@
 <span class="c1"># The metadata columns this class actually needs. Everything else, including</span>
 <span class="c1"># every URL column, is optional -- see `ObservationInfo.public_urls`.</span>
 <span class="n">REQUIRED_COLUMNS</span> <span class="o">=</span> <span class="p">(</span><span class="s1">'time'</span><span class="p">,</span> <span class="s1">'uid'</span><span class="p">)</span>
+
+<span class="n">IMAGES_UNAVAILABLE_MESSAGE</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s1">'Archived frames cannot currently be downloaded. Every URL the metadata '</span>
+    <span class="s1">'carries points into a Google Cloud Storage bucket that no longer serves '</span>
+    <span class="s1">'the object anonymously, in every era of the archive, and there is no '</span>
+    <span class="s1">'public replacement -- see panoptes/panoptes-data#17. Frames have to be '</span>
+    <span class="s1">'read from a local copy of the archive; resolving a sequence against a '</span>
+    <span class="s1">'local archive root is panoptes/panoptes-data#19.'</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="ImagesUnavailableError">
+<a class="viewcode-back" href="../../../api/panoptes.data.html#panoptes.data.observations.ImagesUnavailableError">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ImagesUnavailableError</span><span class="p">(</span><span class="ne">RuntimeError</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Raised when a frame is asked for and no fetchable source exists."""</span></div>
+
 
 
 <div class="viewcode-block" id="ObservationInfo">
@@ -459,7 +471,13 @@
 <div class="viewcode-block" id="ObservationInfo.get_image_data">
 <a class="viewcode-back" href="../../../api/panoptes.data.html#panoptes.data.observations.ObservationInfo.get_image_data">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_image_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">use_raw</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">"""Downloads the image data for the given index."""</span>
+<span class="w">        </span><span class="sd">"""Reads the image data for the given index.</span>
+
+<span class="sd">        This reads whatever is in `image_list`, which `get_image_list` fills</span>
+<span class="sd">        with archive URLs that no longer serve anonymously</span>
+<span class="sd">        (`download_images`). It therefore only works when `image_list` has</span>
+<span class="sd">        been pointed at a local copy of the archive.</span>
+<span class="sd">        """</span>
         <span class="n">data_img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_list</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
         <span class="n">wcs_img</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_list</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
 
@@ -504,6 +522,11 @@
 <span class="sd">        archive path with underscores for separators, so the raw frame's</span>
 <span class="sd">        location follows from it and the bucket.</span>
 
+<span class="sd">        These name where a frame lives in the archive; they are not fetchable.</span>
+<span class="sd">        Nothing serves them anonymously any more -- see `download_images`. The</span>
+<span class="sd">        path below the bucket is the same in a local copy of the archive, so</span>
+<span class="sd">        the tail of each URL is what resolves a frame locally.</span>
+
 <span class="sd">        Args:</span>
 <span class="sd">             bucket: The bucket where the images are stored.</span>
 <span class="sd">             file_ext: The file extension of the images to retrieve.</span>
@@ -528,45 +551,23 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">download_images</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">image_list</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                         <span class="n">warn_on_error</span><span class="o">=</span><span class="kc">True</span>
                         <span class="p">):</span>
-<span class="w">        </span><span class="sd">"""Download the images to the output directory (by default named after the sequence_id).</span>
+<span class="w">        </span><span class="sd">"""Deprecated: archived frames are not currently available for download.</span>
 
-<span class="sd">        Args:</span>
-<span class="sd">            image_list: A list of images to download.</span>
-<span class="sd">            output_dir: The directory to download the images to.</span>
-<span class="sd">            show_progress: Whether to show a progress bar.</span>
-<span class="sd">            warn_on_error: If True (default) issue a warning if an image fails to download,</span>
-<span class="sd">                otherwise raise an exception.</span>
+<span class="sd">        The URLs this class builds are still the right archive locations, and</span>
+<span class="sd">        `get_image_list` still returns them, but nothing serves them: they 404</span>
+<span class="sd">        for an anonymous caller in both the 2018 and the 2025 layout. This</span>
+<span class="sd">        method used to construct those URLs, fail on every one of them, and --</span>
+<span class="sd">        with the default ``warn_on_error`` -- return an empty list as though</span>
+<span class="sd">        the observation simply had no images.</span>
+
+<span class="sd">        It now raises instead, so a caller learns that no frame was fetched at</span>
+<span class="sd">        the point where the fetch was attempted.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ImagesUnavailableError: always.</span>
 <span class="sd">        """</span>
-        <span class="n">output_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">sequence_id</span><span class="p">)</span>
-        <span class="n">output_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-        <span class="n">image_list</span> <span class="o">=</span> <span class="n">image_list</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">image_list</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Downloading </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">image_list</span><span class="p">)</span><span class="si">}</span><span class="s1"> images to </span><span class="si">{</span><span class="n">output_dir</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">show_progress</span><span class="p">:</span>
-            <span class="n">img_iter</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">image_list</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">img_iter</span> <span class="o">=</span> <span class="n">image_list</span>
-
-        <span class="n">img_paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">img</span> <span class="ow">in</span> <span class="n">img_iter</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">show_progress</span><span class="p">:</span>
-                <span class="n">img_iter</span><span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Downloading </span><span class="si">{</span><span class="n">img</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Downloading </span><span class="si">{</span><span class="n">img</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
-
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">fn</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">download_file</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">show_progress</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
-                <span class="n">new_fn</span> <span class="o">=</span> <span class="n">output_dir</span> <span class="o">/</span> <span class="n">Path</span><span class="p">(</span><span class="n">img</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
-                <span class="n">shutil</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">new_fn</span><span class="p">)</span>
-                <span class="n">img_paths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">new_fn</span><span class="p">))</span>
-            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">warn_on_error</span><span class="p">:</span>
-                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="sa">f</span><span class="s1">'Failed to download </span><span class="si">{</span><span class="n">img</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">'</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="n">e</span>
-
-        <span class="k">return</span> <span class="n">img_paths</span></div>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">IMAGES_UNAVAILABLE_MESSAGE</span><span class="p">,</span> <span class="ne">DeprecationWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="n">ImagesUnavailableError</span><span class="p">(</span><span class="n">IMAGES_UNAVAILABLE_MESSAGE</span><span class="p">)</span></div>
 
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
