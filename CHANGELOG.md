@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Deprecated
+
+- `ObservationInfo.download_images` and the `panoptes-data download` CLI
+  command. Archived frames are not currently downloadable: every URL the
+  metadata carries points into a Google Cloud Storage bucket that no longer
+  serves the object anonymously, in both the 2018 and the 2025 layout, and
+  there is no public replacement. Both now raise (`ImagesUnavailableError`, and
+  exit code 1 respectively) with a message saying so, instead of constructing
+  correct URLs and failing on every fetch. Under the default
+  `warn_on_error=True` that failure used to be swallowed into an empty list,
+  which reads as an observation with no images rather than as a broken fetch.
+
+  Frames are read from a local copy of the archive instead. Resolving a
+  sequence against a local archive root is panoptes/panoptes-data#19.
+
+### Changed
+
+- `get_image_list` is unchanged and still names where each frame lives; its
+  docstring now says those URLs are locations rather than something fetchable.
+  The path below the bucket is the same in a local copy of the archive.
+
 ## 0.3.0 (2026-09-13)
 
 ### Fixed

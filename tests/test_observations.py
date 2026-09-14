@@ -1,7 +1,3 @@
-import os
-import tempfile
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -182,47 +178,38 @@ def test_get_image_data_uses_fits_utils(monkeypatch):
     assert ccd.meta.get("FAKE") is True
 
 
-def test_download_images_saves_files_and_handles_errors(monkeypatch, tmp_path):
-    # Patch get_metadata and ensure image_list is set
+def test_download_images_raises_and_warns(monkeypatch):
+    """Regression for panoptes/panoptes-data#17: nothing serves the frames."""
     monkeypatch.setattr(
         obs_mod.ObservationInfo,
         "get_metadata",
         lambda self, query="": pd.DataFrame({
-            "time": ["2020-01-01", "2020-01-02"],
-            "uid": ["PAN001_abc_good", "PAN001_abc_bad"],
+            "time": ["2020-01-01"],
+            "uid": ["PAN001_abc_20200101T000000_20200101T000100"],
         }),
     )
 
     oi = obs_mod.ObservationInfo(sequence_id="SEQ")
 
-    # Fake download_file: create a temp file and return its path. For the bad file, raise Exception
-    def fake_download_file(url, show_progress=False):
-        if "bad" in url:
-            raise RuntimeError("download failed")
-        tf = tempfile.NamedTemporaryFile(delete=False)
-        tf.write(b"data")
-        tf.flush()
-        tf.close()
-        return tf.name
+    with pytest.warns(DeprecationWarning), pytest.raises(obs_mod.ImagesUnavailableError):
+        oi.download_images(output_dir="unused", show_progress=False)
 
-    monkeypatch.setattr(obs_mod, "download_file", fake_download_file)
 
-    # Run download_images and expect it to warn but continue
-    outdir = tmp_path / "out"
-    paths = oi.download_images(output_dir=str(outdir), show_progress=False, warn_on_error=True)
+def test_download_images_raises_even_when_warn_on_error(monkeypatch):
+    """`warn_on_error` used to turn every failed fetch into an empty result."""
+    monkeypatch.setattr(
+        obs_mod.ObservationInfo,
+        "get_metadata",
+        lambda self, query="": pd.DataFrame({
+            "time": ["2020-01-01"],
+            "uid": ["PAN001_abc_20200101T000000_20200101T000100"],
+        }),
+    )
 
-    # Only the successful file should be returned
-    assert len(paths) == 1
-    assert Path(paths[0]).exists()
-    # returned path should be within the provided output directory
-    assert str(outdir) in paths[0]
+    oi = obs_mod.ObservationInfo(sequence_id="SEQ")
 
-    # Clean up created temp files
-    for p in paths:
-        try:
-            os.remove(p)
-        except Exception:
-            pass
+    with pytest.warns(DeprecationWarning), pytest.raises(obs_mod.ImagesUnavailableError):
+        oi.download_images(warn_on_error=True, show_progress=False)
 
 
 if __name__ == "__main__":
