@@ -2,7 +2,8 @@
 
 # PANOPTES Data tools
 
-Tools for searching and downloading PANOPTES data.
+Tools for searching PANOPTES observations and reading their frames from a
+local copy of the archive.
 
 ## Install
 
@@ -54,19 +55,41 @@ unit_id                                             PAN001
 Name: 6121, dtype: object
 ```
 
-### Downloading images
+### Reading images
 
-Not currently possible. Every frame URL the archive metadata carries points into
-a Google Cloud Storage bucket that no longer serves the object anonymously, and
-there is no public replacement, so `ObservationInfo.download_images()` raises
-rather than returning an empty list ([#17][issue-17]). Frames are read from a
-local copy of the archive; resolving a sequence against one is [#19][issue-19].
+Frames are read from a local copy of the archive. Point `PANOPTES_ARCHIVE_ROOT`
+at the directory holding the unit folders -- the archive keeps the bucket's
+layout, so that is `<root>/PAN012/358d0f/20180824T035917/20180824T040118.fits.fz`
+-- and a sequence resolves to files on disk:
 
-`obs_info.image_list` still names where each frame lives in the archive. Those
-paths are the same below the bucket in a local copy.
+```bash
+export PANOPTES_ARCHIVE_ROOT=/data/panoptes-archive
+```
+
+```py
+from panoptes.data.observations import ObservationInfo
+
+obs_info = ObservationInfo('PAN012_358d0f_20180824T035917')
+
+# Local paths now, rather than archive URLs.
+print(obs_info.image_list[0])
+# /data/panoptes-archive/PAN012/358d0f/20180824T035917/20180824T040118.fits.fz
+
+ccd = obs_info.get_image_data(idx=0)
+```
+
+Every frame the metadata names has to be present: a sequence whose local copy
+is incomplete raises `FileNotFoundError` naming the path it looked for, rather
+than returning a shorter list that reads as an observation with fewer frames.
+
+Downloading is not possible and the root has no default. Every frame URL the
+archive metadata carries points into a Google Cloud Storage bucket that no
+longer serves the object anonymously, and there is no public replacement, so
+`ObservationInfo.download_images()` raises rather than returning an empty list
+([#17][issue-17]). With no root configured `obs_info.image_list` holds those
+URLs, which name where each frame lives but are not fetchable.
 
 [issue-17]: https://github.com/panoptes/panoptes-data/issues/17
-[issue-19]: https://github.com/panoptes/panoptes-data/issues/19
 
 ### Command-line tools
 

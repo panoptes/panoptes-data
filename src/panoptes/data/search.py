@@ -9,7 +9,7 @@ from astropy.utils.data import download_file
 from dateutil.parser import parse as parse_date
 
 from panoptes.data.observations import ObservationInfo
-from panoptes.data.settings import CloudSettings
+from panoptes.data.settings import SurveySettings
 from panoptes.utils.time import current_time
 from panoptes.utils.utils import listify
 
@@ -164,17 +164,17 @@ def search_observations(
     return obs_df
 
 
-def get_all_observations(settings: CloudSettings = None) -> pd.DataFrame:
+def get_all_observations(settings: SurveySettings = None) -> pd.DataFrame:
     """Get all the observations.
 
     Args:
-        settings (CloudSettings, optional): The settings to use for the observations.
+        settings (SurveySettings, optional): The settings to use for the observations.
             Defaults to None.
 
     Returns:
         pd.DataFrame: A DataFrame of all the observations.
     """
-    settings = settings or CloudSettings()
+    settings = settings or SurveySettings()
 
     print(f'Getting list of observations at {settings.observations_url}')
     local_path = download_file(

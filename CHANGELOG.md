@@ -2,26 +2,62 @@
 
 ## Unreleased
 
-### Deprecated
+### Added
 
-- `ObservationInfo.download_images` and the `panoptes-data download` CLI
-  command. Archived frames are not currently downloadable: every URL the
-  metadata carries points into a Google Cloud Storage bucket that no longer
-  serves the object anonymously, in both the 2018 and the 2025 layout, and
-  there is no public replacement. Both now raise (`ImagesUnavailableError`, and
-  exit code 1 respectively) with a message saying so, instead of constructing
-  correct URLs and failing on every fetch. Under the default
-  `warn_on_error=True` that failure used to be swallowed into an empty list,
-  which reads as an observation with no images rather than as a broken fetch.
+- `SurveySettings.archive_root`, set from `PANOPTES_ARCHIVE_ROOT`, names a
+  local copy of the archive. It points at the directory holding the unit
+  folders, so `<root>/PAN012/358d0f/20180824T035917/...` -- the archive keeps
+  the bucket's layout, and the bucket name is absorbed by how the root is set
+  rather than leaking into local paths. It has no default; without one nothing
+  changes.
 
-  Frames are read from a local copy of the archive instead. Resolving a
-  sequence against a local archive root is panoptes/panoptes-data#19.
+- `get_image_list` accepts `archive_root` per call, overriding the setting.
 
 ### Changed
 
-- `get_image_list` is unchanged and still names where each frame lives; its
-  docstring now says those URLs are locations rather than something fetchable.
-  The path below the bucket is the same in a local copy of the archive.
+- `get_image_list` returns local `Path` objects when an archive root is
+  configured, and archive URLs when it is not. `get_image_data` therefore works
+  again: it reads whatever that list holds, and the URLs it used to hold are
+  not fetchable by anyone (panoptes/panoptes-data#17).
+
+  A frame the metadata names but the local archive does not hold raises
+  `FileNotFoundError` naming the path it looked for. A partial archive that
+  silently returned fewer frames would read as an observation with fewer
+  frames rather than as an incomplete copy. The extension is matched exactly,
+  since the layout on disk is the bucket's layout. A root that is not a
+  directory at all raises separately, so a mistyped root is not reported as an
+  incomplete copy.
+
+- **Breaking:** `CloudSettings` is now `SurveySettings`. Every field on it
+  names a location of survey data, and with a local archive root among them the
+  cloud name described the transport of some of them rather than what the class
+  is for.
+
+- **Breaking:** settings take a `PANOPTES_` environment prefix, so
+  `IMG_BUCKET` is now `PANOPTES_IMG_BUCKET`, and likewise for
+  `PANOPTES_IMG_BASE_URL`, `PANOPTES_IMG_METADATA_URL` and
+  `PANOPTES_OBSERVATIONS_URL`. A package should not claim bare names like
+  `ARCHIVE_ROOT` in a shared environment.
+
+- A malformed `uid` raises a `ValueError` naming the uid and the sequence.
+  Frame paths are now built by `ImagePathInfo` from `panoptes-utils`, which
+  parses the archive path convention and so validates the uid on the way past,
+  replacing a hand-rolled `str(uid).replace("_", "/")` that accepted anything.
+
+### Deprecated
+
+- `ObservationInfo.download_images` and the `panoptes-data download` CLI
+  command. Archived frames are not downloadable: every URL the metadata carries
+  points into a Google Cloud Storage bucket that no longer serves the object
+  anonymously, in both the 2018 and the 2025 layout, and there is no public
+  replacement. Both now raise (`ImagesUnavailableError`, and exit code 1
+  respectively) with a message saying so, instead of constructing correct URLs
+  and failing on every fetch. Under the default `warn_on_error=True` that
+  failure used to be swallowed into an empty list, which reads as an
+  observation with no images rather than as a broken fetch.
+
+  The message now says to set `PANOPTES_ARCHIVE_ROOT` and read the frames
+  locally, which is the only way to read them.
 
 ## 0.3.0 (2026-09-13)
 
