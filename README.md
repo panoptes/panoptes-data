@@ -55,16 +55,49 @@ unit_id                                             PAN001
 Name: 6121, dtype: object
 ```
 
-### Reading images
+### Configuration
 
-Frames are read from a local copy of the archive. Point `PANOPTES_ARCHIVE_ROOT`
-at the directory holding the unit folders -- the archive keeps the bucket's
-layout, so that is `<root>/PAN012/358d0f/20180824T035917/20180824T040118.fits.fz`
--- and a sequence resolves to files on disk:
+Settings are read from the environment with a `PANOPTES_` prefix, and from a
+`.env` file in the directory you run from. Copy the shipped example and edit
+it:
 
 ```bash
-export PANOPTES_ARCHIVE_ROOT=/data/panoptes-archive
+cp .env.example .env
 ```
+
+```ini
+# .env
+PANOPTES_ARCHIVE_ROOT=/data/panoptes-archive
+```
+
+A real environment variable beats the file, and an argument beats both, so a
+one-off run needs no edit:
+
+```bash
+PANOPTES_ARCHIVE_ROOT=/mnt/other-copy panoptes-data search --name M42
+```
+
+The `.env` is read from the current working directory, not from wherever the
+package is installed -- so run from the directory holding it, or export the
+variable instead. Keys that are not settings of this package are ignored, since
+a `.env` is usually shared with other tools; the cost is that a *misspelled*
+`PANOPTES_*` key is ignored too, so check for a typo if a setting seems not to
+take effect.
+
+| Setting | What it locates |
+| --- | --- |
+| `PANOPTES_ARCHIVE_ROOT` | A local copy of the archive. No default; without it frames resolve to URLs that cannot be fetched. |
+| `PANOPTES_IMG_BASE_URL`, `PANOPTES_IMG_BUCKET` | The cloud archive as it was laid out. |
+| `PANOPTES_IMG_METADATA_URL` | Per-sequence image metadata. |
+| `PANOPTES_OBSERVATIONS_URL` | The `observations.csv` summary that `search_observations` reads. |
+
+### Reading images
+
+Frames are read from a local copy of the archive. `PANOPTES_ARCHIVE_ROOT`
+points at the directory holding the unit folders -- the archive keeps the
+bucket's layout, so that is
+`<root>/PAN012/358d0f/20180824T035917/20180824T040118.fits.fz` -- and a
+sequence resolves to files on disk:
 
 ```py
 from panoptes.data.observations import ObservationInfo

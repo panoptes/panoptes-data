@@ -29,6 +29,7 @@ dependencies = [
     "pydantic",
     "pydantic-settings",
     "python-dateutil",
+    "python-dotenv",
     "rich[jupyter]",
     "tabulate",
     "tqdm",

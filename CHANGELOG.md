@@ -13,6 +13,16 @@
 
 - `get_image_list` accepts `archive_root` per call, overriding the setting.
 
+- Settings are read from a `.env` file in the working directory as well as from
+  the environment, so a machine-specific archive root can sit beside a project
+  rather than being exported in every shell. A real environment variable beats
+  the file and an argument beats both. `.env.example` documents every setting.
+
+  Keys that are not settings of this package are ignored rather than rejected:
+  a `.env` is usually shared with other tools, and a `DATABASE_URL` in it must
+  not stop a frame being read. A misspelled `PANOPTES_*` key is therefore
+  ignored too.
+
 ### Changed
 
 - `get_image_list` returns local `Path` objects when an archive root is
@@ -37,7 +47,10 @@
   `IMG_BUCKET` is now `PANOPTES_IMG_BUCKET`, and likewise for
   `PANOPTES_IMG_BASE_URL`, `PANOPTES_IMG_METADATA_URL` and
   `PANOPTES_OBSERVATIONS_URL`. A package should not claim bare names like
-  `ARCHIVE_ROOT` in a shared environment.
+  `ARCHIVE_ROOT` in a shared environment, and the same names now have to work
+  inside a `.env` shared with other tools.
+
+- `python-dotenv` is a declared dependency, for the `.env` support above.
 
 - A malformed `uid` raises a `ValueError` naming the uid and the sequence.
   Frame paths are now built by `ImagePathInfo` from `panoptes-utils`, which

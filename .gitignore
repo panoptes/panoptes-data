@@ -52,3 +52,6 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
+
+# Local settings. Holds machine-specific paths such as PANOPTES_ARCHIVE_ROOT.
+.env

@@ -17,9 +17,25 @@ class SurveySettings(BaseSettings):
     rather than somewhere to fetch it from. `archive_root` is how a frame is
     actually read: point it at a local copy of the archive and
     `ObservationInfo.get_image_list` resolves a sequence to files on disk.
+
+    A ``.env`` file in the working directory is read as well, so the archive
+    root can be checked out beside a project rather than exported in every
+    shell. A real environment variable wins over the file, and an explicit
+    argument wins over both.
+
+    Keys that are not settings of this class are ignored rather than rejected,
+    because a ``.env`` is usually shared with other tools and a
+    ``DATABASE_URL`` in it must not stop a frame being read. The cost is that a
+    misspelled ``PANOPTES_*`` key is ignored too, so a setting that appears not
+    to take effect is worth checking for a typo.
     """
 
-    model_config = SettingsConfigDict(env_prefix='panoptes_')
+    model_config = SettingsConfigDict(
+        env_prefix='panoptes_',
+        env_file='.env',
+        env_file_encoding='utf-8',
+        extra='ignore',
+    )
 
     archive_root: Path | None = None
     img_base_url: AnyHttpUrl = 'https://storage.googleapis.com'
