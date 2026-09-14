@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Releases are published to PyPI with Trusted Publishing rather than a
+  long-lived API token, so they now carry build attestations that anyone can
+  verify. The publish action produces those by default, but an explicit
+  password silently disabled both it and them.
+
+- The release workflow creates the GitHub release as well, using the annotated
+  tag message as the notes, so the tag and the release cannot say different
+  things. It had only ever published to PyPI, despite the name.
+
+- The tag pattern that triggers a release accepts a multi-digit major version.
+  `v[0-9].` would have stopped matching at `v10.0.0`, releasing nothing and
+  saying nothing.
+
 ## 0.4.0 (2026-09-13)
 
 ### Added

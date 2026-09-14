@@ -1,9 +1,16 @@
-# This will create a release for any properly tagged branch.
+# Publishes to PyPI and creates the GitHub release for any vX.Y.Z tag.
+#
+# Authentication is PyPI Trusted Publishing, which mints a short-lived OIDC
+# token for this workflow instead of holding a long-lived API token. It needs a
+# one-time setup on PyPI itself -- Manage project -> Publishing -> Add a new
+# publisher, with owner `panoptes`, repository `panoptes-data`, and workflow
+# `create-release.yml`. Without that, the publish step fails with an
+# authentication error.
 on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-      - 'v[0-9].[0-9]+.[0-9]+' # Push events to matching vX.Y.Z, but not vX.Y.Zdev
+      - 'v[0-9]+.[0-9]+.[0-9]+' # Push events to matching vX.Y.Z, but not vX.Y.Zdev
 
 name: Create GitHub Release
 
@@ -11,6 +18,9 @@ jobs:
   deploy:
     name: Push Release to PyPi
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write   # Mint the OIDC token Trusted Publishing authenticates with.
+      contents: write   # Create the GitHub release.
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,7 +39,17 @@ jobs:
           hatch clean
           hatch build
       - name: Publish package
+        # No user/password: an explicit password disables Trusted Publishing,
+        # and with it the build attestations this action produces by default.
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}          
+      - name: Create the GitHub release
+        # The annotated tag message is the release notes, so what the tag says
+        # and what the release says cannot drift apart.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag --list --format='%(contents)' "${GITHUB_REF_NAME}" > notes.md
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            dist/*
