@@ -123,7 +123,7 @@
   thousand sequences compared each-to-each is a hundred and fifty million
   comparisons to find a few hundred pairs.
 
-- A `pairs` CLI command over the same function.
+- A `pairs` CLI command over `find_simultaneous`.
 
 - `PANOPTES_PROCESSED_ROOT` names the pipeline's document tree, and
   `PANOPTES_INDEX_ROOT` names where the parquet index lives -- defaulting to the
@@ -189,6 +189,13 @@
 
   This is the rule the rest of the package already followed: partial data
   raises, it never silently shortens.
+
+- The `search` and `get-metadata` CLI commands no longer bind one short flag to
+  two options. `-s` was `--start-date` *and* `--end-date`, and `-r` was `--ra`
+  *and* `--radius`, so the later registration silently won and `-s 2024-01-01`
+  set the end date. `--start-date` keeps `-s`, `--end-date` takes `-e`,
+  `--radius` keeps `-r` and `--ra` is long-form only; in `get-metadata`,
+  `--sequence-id` takes `-i`.
 
 - `read_frames` applies the contract's dropped blocks and reindexes to its
   required columns, so reading documents directly and reading `frames.parquet`
