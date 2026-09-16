@@ -26,6 +26,19 @@ jobs:
         with:
           # hatch-vcs derives the version from the tag, so it needs the history.
           fetch-depth: 0
+      # Before anything is built or published: the release notes come from the
+      # tag message, and only an annotated tag has one. `%(contents)` on a
+      # lightweight tag reports the *commit* message instead, which would
+      # publish a commit subject as the release notes -- wrong, and plausible
+      # enough to go unnoticed. Failing here costs nothing; failing after the
+      # PyPI upload would leave a published version with no release.
+      - name: Require an annotated tag
+        run: |
+          if [ "$(git cat-file -t "${GITHUB_REF_NAME}")" != "tag" ]; then
+            echo "::error::${GITHUB_REF_NAME} is a lightweight tag. The release notes are the tag message, so the tag must be annotated: git tag -a ${GITHUB_REF_NAME} -m '...'"
+            exit 1
+          fi
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -49,6 +62,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           git tag --list --format='%(contents)' "${GITHUB_REF_NAME}" > notes.md
+          # An annotated tag with an empty message still yields a newline, so
+          # this looks for actual content rather than a non-empty file.
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::${GITHUB_REF_NAME} has an empty tag message, and the release notes come from it."
+            exit 1
+          fi
           gh release create "${GITHUB_REF_NAME}" \
             --title "${GITHUB_REF_NAME}" \
             --notes-file notes.md \
