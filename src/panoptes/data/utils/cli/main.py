@@ -14,48 +14,46 @@ app = typer.Typer(pretty_exceptions_enable=False)
 
 
 @app.command(deprecated=True)
-def download(sequence_id: str | None = typer.Argument(..., help='Sequence ID for the Observation.'),
-             output_dir: Path = typer.Option(
-                 None,
-                 '--output-dir', '-o',
-                 help='Output directory for images, defaults to sequence_id.'
-             ),
-             image_query: str = typer.Option(
-                 'image_status!="ERROR"',
-                 '--image-query', '-q',
-                 help='Query for images, default \'image_status!="ERROR"\''
-             ),
-             ) -> list[str]:
+def download(
+    sequence_id: str | None = typer.Argument(..., help="Sequence ID for the Observation."),
+    output_dir: Path = typer.Option(
+        None, "--output-dir", "-o", help="Output directory for images, defaults to sequence_id."
+    ),
+    image_query: str = typer.Option(
+        'image_status!="ERROR"',
+        "--image-query",
+        "-q",
+        help="Query for images, default 'image_status!=\"ERROR\"'",
+    ),
+) -> list[str]:
     """Deprecated: archived frames are not currently available for download.
 
     See `ObservationInfo.download_images` for why. Exits non-zero.
     """
-    print(f'[red]Cannot download images for {sequence_id}: {IMAGES_UNAVAILABLE_MESSAGE}')
+    print(f"[red]Cannot download images for {sequence_id}: {IMAGES_UNAVAILABLE_MESSAGE}")
     raise typer.Exit(code=1)
 
 
 @app.command()
 def get_metadata(
     sequence_id: str | None = typer.Option(
-        None, '--sequence-id', '-s',
-        help='Sequence ID for the Observation.'
+        None, "--sequence-id", "-s", help="Sequence ID for the Observation."
     ),
     unit_id: str | None = typer.Option(
-        None, '--unit-id', '-u',
-        help='Unit ID for the Observation. '
-             'Use with a date range to download all metadata for a unit.'
+        None,
+        "--unit-id",
+        "-u",
+        help="Unit ID for the Observation. "
+        "Use with a date range to download all metadata for a unit.",
     ),
     start_date: str | None = typer.Option(
-        None, '--start-date', '-s',
-        help='Start date for downloading metadata in form YYYY-MM-DD'
+        None, "--start-date", "-s", help="Start date for downloading metadata in form YYYY-MM-DD"
     ),
     end_date: str | None = typer.Option(
-        None, '--end-date', '-s',
-        help='End date for downloading metadata, defaults to now.'
+        None, "--end-date", "-s", help="End date for downloading metadata, defaults to now."
     ),
     output_dir: Path = typer.Option(
-        Path('.'), '--output-dir', '-o',
-        help='Output directory for metadata file.'
+        Path("."), "--output-dir", "-o", help="Output directory for metadata file."
     ),
 ):
     """Download metadata.
@@ -65,21 +63,21 @@ def get_metadata(
     """
 
     if sequence_id is not None:
-        output_fn = output_dir / f'{sequence_id}-metadata.csv'
+        output_fn = output_dir / f"{sequence_id}-metadata.csv"
         try:
             obs_info = ObservationInfo(sequence_id=sequence_id)
             obs_info.image_metadata.to_csv(output_fn)
-            print(f'[green]Metadata saved to {output_fn}')
+            print(f"[green]Metadata saved to {output_fn}")
         except Exception as e:
-            print(f'[red]Error downloading metadata for {sequence_id}: {e}')
+            print(f"[red]Error downloading metadata for {sequence_id}: {e}")
             raise typer.Exit(code=1) from e
     else:
         if unit_id is None:
-            print('[red]Must provide a unit_id if not providing a sequence_id.')
+            print("[red]Must provide a unit_id if not providing a sequence_id.")
             return
 
         if start_date is None:
-            print('[red]Must provide a start_date if not providing a sequence_id.')
+            print("[red]Must provide a start_date if not providing a sequence_id.")
             return
         else:
             start_date = flatten_time(Time(start_date))[:8]
@@ -89,7 +87,7 @@ def get_metadata(
         else:
             end_date = flatten_time(Time(end_date))[:8]
 
-        output_fn = output_dir / f'{unit_id}-{start_date}-{end_date}-metadata.csv'
+        output_fn = output_dir / f"{unit_id}-{start_date}-{end_date}-metadata.csv"
         try:
             results_df = search_observations(
                 unit_id=unit_id.upper(),
@@ -97,27 +95,31 @@ def get_metadata(
                 end_date=end_date,
                 # There is no all-sky search yet, so a cone wide enough to be
                 # one stands in for it. See panoptes/panoptes-data#14.
-                ra=180, dec=0, radius=290
+                ra=180,
+                dec=0,
+                radius=290,
             )
 
             dfs = list()
             failed = list()
             for idx, rec in (pbar := tqdm(results_df.iterrows(), total=len(results_df))):
-                sequence_id = rec['sequence_sequence_id']
+                sequence_id = rec["sequence_sequence_id"]
                 try:
-                    pbar.set_description(f'Getting metadata for {sequence_id}')
+                    pbar.set_description(f"Getting metadata for {sequence_id}")
                     dfs.append(ObservationInfo(meta=rec).image_metadata)
                 except Exception as e:
-                    pbar.write(f'Error in {idx} {sequence_id}: {e!r}')
+                    pbar.write(f"Error in {idx} {sequence_id}: {e!r}")
                     failed.append(sequence_id)
 
             # A partial export is indistinguishable from a complete one once it
             # is a file on disk, so it is not written at all. Reporting the
             # count and exiting non-zero is the whole point.
             if failed:
-                print(f'[red]{len(failed)} of {len(results_df)} sequences could not be '
-                      f'read, so no metadata file was written. First failures: '
-                      f'{failed[:5]}')
+                print(
+                    f"[red]{len(failed)} of {len(results_df)} sequences could not be "
+                    f"read, so no metadata file was written. First failures: "
+                    f"{failed[:5]}"
+                )
                 raise typer.Exit(code=1)
 
             pd.concat(dfs).to_csv(output_fn)
@@ -126,49 +128,33 @@ def get_metadata(
             # `DocumentsUnavailableError` is a `FileNotFoundError`: an
             # unconfigured or mistyped root is a configuration mistake and
             # deserves its message, not a traceback.
-            print(f'[red]Error downloading metadata for {unit_id}: {e}')
+            print(f"[red]Error downloading metadata for {unit_id}: {e}")
             raise typer.Exit(code=1) from e
 
-    print(f'Metadata saved to [green]{output_fn}')
+    print(f"Metadata saved to [green]{output_fn}")
 
     return output_fn
 
 
 @app.command()
 def search(
-    name: str = typer.Option(
-        None, '--name', '-n',
-        help='Name of object to search for.'
-    ),
-    unit_id: str = typer.Option(
-        None, '--unit-id', '-u',
-        help='Unit ID for the Observation.'
-    ),
+    name: str = typer.Option(None, "--name", "-n", help="Name of object to search for."),
+    unit_id: str = typer.Option(None, "--unit-id", "-u", help="Unit ID for the Observation."),
     start_date: str = typer.Option(
-        None, '--start-date', '-s',
-        help='Start date for downloading metadata in form YYYY-MM-DD'
+        None, "--start-date", "-s", help="Start date for downloading metadata in form YYYY-MM-DD"
     ),
     end_date: str = typer.Option(
-        None, '--end-date', '-s',
-        help='End date for downloading metadata, defaults to now.'
+        None, "--end-date", "-s", help="End date for downloading metadata, defaults to now."
     ),
-    ra: float = typer.Option(
-        None, '--ra', '-r',
-        help='RA in degrees for search.'
-    ),
-    dec: float = typer.Option(
-        None, '--dec', '-d',
-        help='Dec in degrees for search.'
-    ),
-    radius: int = typer.Option(
-        10, '--radius', '-r',
-        help='Radius in degrees for search.'
-    ),
+    ra: float = typer.Option(None, "--ra", "-r", help="RA in degrees for search."),
+    dec: float = typer.Option(None, "--dec", "-d", help="Dec in degrees for search."),
+    radius: int = typer.Option(10, "--radius", "-r", help="Radius in degrees for search."),
     min_num_frames: int = typer.Option(
-        1, '--min-num-frames', '-m',
-        help='Minimum number of frames the observation has a document for.'
+        1,
+        "--min-num-frames",
+        "-m",
+        help="Minimum number of frames the observation has a document for.",
     ),
-
 ):
     """Search for observations."""
     results = search_observations(
@@ -179,18 +165,28 @@ def search(
         ra=ra,
         dec=dec,
         min_num_frames=min_num_frames,
-        radius=radius
+        radius=radius,
     )
 
     if len(results) == 0:
-        print('[red]No results found.')
+        print("[red]No results found.")
         return
 
-    display_cols = ['field_name', 'unit_id', 'mount_ra', 'mount_dec', 'num_frames', 'num_usable',
-                    'exptime', 'total_exptime', 'duration_minutes', 'sequence_time']
-    markdown_table = results.set_index('sequence_sequence_id')[display_cols].to_markdown()
+    display_cols = [
+        "field_name",
+        "unit_id",
+        "mount_ra",
+        "mount_dec",
+        "num_frames",
+        "num_usable",
+        "exptime",
+        "total_exptime",
+        "duration_minutes",
+        "sequence_time",
+    ]
+    markdown_table = results.set_index("sequence_sequence_id")[display_cols].to_markdown()
     print(markdown_table)
-    print(f'Found {len(results)} observations.')
+    print(f"Found {len(results)} observations.")
 
 
 if __name__ == "__main__":

@@ -35,14 +35,14 @@ from panoptes.data.search import search_observations
 from panoptes.data.observations import ObservationInfo
 
 # Find some observations
-results = search_observations(by_name='M42')
+results = search_observations(by_name="M42")
 
 # Use a result entry to create an ObservationInfo object.
 obs_info = ObservationInfo(meta=results.iloc[0])
 
 # Or go straight to a sequence id -- the observation document is read either
 # way, so this is no longer the lesser way in.
-obs_info = ObservationInfo('PAN001_14d3bd_20180113T052325')
+obs_info = ObservationInfo("PAN001_14d3bd_20180113T052325")
 print(obs_info.meta)
 ```
 
@@ -132,12 +132,12 @@ document's nested maps flattened into the same column names the index carries:
 ```py
 from panoptes.data.observations import USABLE_QUERY, ObservationInfo
 
-obs_info = ObservationInfo('PAN012_358d0f_20180824T035917')
+obs_info = ObservationInfo("PAN012_358d0f_20180824T035917")
 
-obs_info.image_metadata[['image_uid', 'image_status', 'image_camera_exptime']]
+obs_info.image_metadata[["image_uid", "image_status", "image_camera_exptime"]]
 
 # Every frame the sequence has, including the ones that failed processing.
-everything = ObservationInfo('PAN012_358d0f_20180824T035917', image_query='')
+everything = ObservationInfo("PAN012_358d0f_20180824T035917", image_query="")
 ```
 
 **The default is `USABLE_QUERY`**, which is `image_status == "MATCHED"` -- the
@@ -181,7 +181,7 @@ sequence resolves to files on disk:
 ```py
 from panoptes.data.observations import ObservationInfo
 
-obs_info = ObservationInfo('PAN012_358d0f_20180824T035917')
+obs_info = ObservationInfo("PAN012_358d0f_20180824T035917")
 
 # Local paths now, rather than archive URLs.
 print(obs_info.image_list[0])

@@ -18,16 +18,16 @@ logger = logging.getLogger()
 # own, so asking four columns of `frames.parquet` does not pay for the fifty
 # the file carries.
 POINTING_COLUMNS = (
-    'sequence_sequence_id',
-    'sequence_coordinates_mount_ra',
-    'sequence_coordinates_mount_dec',
+    "sequence_sequence_id",
+    "sequence_coordinates_mount_ra",
+    "sequence_coordinates_mount_dec",
 )
 
 # What `add_pointing` adds to the observation index. These are *derived here*,
 # not columns the contract declares: `observations.parquet` groups on sequence
 # and carries no coordinates, because a mount position is a per-frame reading.
 # See `add_pointing` for why the drift columns come with them.
-POINTING_RESULT_COLUMNS = ('mount_ra', 'mount_dec', 'mount_ra_drift', 'mount_dec_drift')
+POINTING_RESULT_COLUMNS = ("mount_ra", "mount_dec", "mount_ra_drift", "mount_dec_drift")
 
 
 def wrap_degrees(angle):
@@ -68,11 +68,11 @@ def add_pointing(observations: pd.DataFrame, frames: pd.DataFrame) -> pd.DataFra
         # in it, so an index over documents that never carried a mount position
         # is valid. Searching it by coordinate finds nothing, which is true;
         # refusing to read it at all would not be.
-        logger.warning(f'The frames index carries no {missing}; no sequence has a pointing.')
+        logger.warning(f"The frames index carries no {missing}; no sequence has a pointing.")
         return observations.assign(**{name: np.nan for name in POINTING_RESULT_COLUMNS})
 
     pointing = frames.dropna(
-        subset=['sequence_coordinates_mount_ra', 'sequence_coordinates_mount_dec']
+        subset=["sequence_coordinates_mount_ra", "sequence_coordinates_mount_dec"]
     )
     if pointing.empty:
         return observations.assign(**{name: np.nan for name in POINTING_RESULT_COLUMNS})
@@ -80,35 +80,33 @@ def add_pointing(observations: pd.DataFrame, frames: pd.DataFrame) -> pd.DataFra
     ra = np.radians(pointing.sequence_coordinates_mount_ra.astype(float))
     pointing = pointing.assign(_ra_sin=np.sin(ra), _ra_cos=np.cos(ra))
 
-    grouped = pointing.groupby('sequence_sequence_id', observed=True)
+    grouped = pointing.groupby("sequence_sequence_id", observed=True)
     means = grouped.agg(
-        _ra_sin=('_ra_sin', 'mean'),
-        _ra_cos=('_ra_cos', 'mean'),
-        mount_dec=('sequence_coordinates_mount_dec', 'mean'),
+        _ra_sin=("_ra_sin", "mean"),
+        _ra_cos=("_ra_cos", "mean"),
+        mount_dec=("sequence_coordinates_mount_dec", "mean"),
     )
     mean_ra = np.degrees(np.arctan2(means._ra_sin, means._ra_cos)) % 360.0
     # A mean that lands a hair below zero rounds to exactly 360 under the
     # modulo, which is the same direction reported as the wrong number.
-    means['mount_ra'] = mean_ra.where(mean_ra < 360.0, 0.0)
+    means["mount_ra"] = mean_ra.where(mean_ra < 360.0, 0.0)
 
     # Drift is measured against each sequence's own mean, so it has to be
     # joined back onto the frames before it can be reduced again.
-    per_frame = pointing.join(
-        means[['mount_ra', 'mount_dec']], on='sequence_sequence_id'
-    )
-    per_frame['_ra_offset'] = np.abs(
+    per_frame = pointing.join(means[["mount_ra", "mount_dec"]], on="sequence_sequence_id")
+    per_frame["_ra_offset"] = np.abs(
         wrap_degrees(per_frame.sequence_coordinates_mount_ra.astype(float) - per_frame.mount_ra)
     )
-    per_frame['_dec_offset'] = np.abs(
+    per_frame["_dec_offset"] = np.abs(
         per_frame.sequence_coordinates_mount_dec.astype(float) - per_frame.mount_dec
     )
-    drift = per_frame.groupby('sequence_sequence_id', observed=True).agg(
-        mount_ra_drift=('_ra_offset', 'max'),
-        mount_dec_drift=('_dec_offset', 'max'),
+    drift = per_frame.groupby("sequence_sequence_id", observed=True).agg(
+        mount_ra_drift=("_ra_offset", "max"),
+        mount_dec_drift=("_dec_offset", "max"),
     )
 
     return observations.join(
-        means[['mount_ra', 'mount_dec']].join(drift), on='sequence_sequence_id'
+        means[["mount_ra", "mount_dec"]].join(drift), on="sequence_sequence_id"
     )
 
 
@@ -123,8 +121,8 @@ def search_observations(
     radius=10,  # degrees
     min_num_frames=1,
     source=None,
-    ra_col='mount_ra',
-    dec_col='mount_dec',
+    ra_col="mount_ra",
+    dec_col="mount_dec",
 ) -> pd.DataFrame:
     """Search PANOPTES observations.
 
@@ -174,17 +172,17 @@ def search_observations(
     Returns:
         `pandas.DataFrame`: A table with the matching observation results.
     """
-    logger.debug('Setting up search params')
+    logger.debug("Setting up search params")
 
     if coords is None:
         if by_name is not None:
             coords = SkyCoord.from_name(by_name)
-            print(f'Found coords for {by_name}: {coords}')
+            print(f"Found coords for {by_name}: {coords}")
         else:
-            coords = SkyCoord(ra=ra, dec=dec, unit='degree')
+            coords = SkyCoord(ra=ra, dec=dec, unit="degree")
 
     if start_date is None:
-        start_date = f'{dt.today().year}-01-01'
+        start_date = f"{dt.today().year}-01-01"
 
     if end_date is None:
         end_date = current_time()
@@ -195,17 +193,17 @@ def search_observations(
     # Never mutate the caller's table: the previous version ran
     # `query(..., inplace=True)` on whatever `source` was handed in.
     obs_df = source.copy() if source is not None else get_all_observations()
-    print(f'Searching {len(obs_df)} observations')
+    print(f"Searching {len(obs_df)} observations")
 
     # Widen each sequence's box by its own drift. A drift the index cannot
     # report is treated as zero rather than as infinite: unknown drift should
     # not pull in every sequence in the archive.
-    ra_pad = radius + obs_df.get(f'{ra_col}_drift', pd.Series(0.0, index=obs_df.index)).fillna(0.0)
-    dec_pad = radius + obs_df.get(
-        f'{dec_col}_drift', pd.Series(0.0, index=obs_df.index)
-    ).fillna(0.0)
+    ra_pad = radius + obs_df.get(f"{ra_col}_drift", pd.Series(0.0, index=obs_df.index)).fillna(0.0)
+    dec_pad = radius + obs_df.get(f"{dec_col}_drift", pd.Series(0.0, index=obs_df.index)).fillna(
+        0.0
+    )
 
-    sequence_time = pd.to_datetime(obs_df.sequence_time, format='mixed', utc=True)
+    sequence_time = pd.to_datetime(obs_df.sequence_time, format="mixed", utc=True)
 
     matches = (
         (np.abs(wrap_degrees(obs_df[ra_col].astype(float) - coords.ra.deg)) <= ra_pad)
@@ -215,27 +213,26 @@ def search_observations(
         & (obs_df.num_frames >= min_num_frames)
     )
     obs_df = obs_df[matches.fillna(False)]
-    print(f'Found {len(obs_df)} observations after initial filter')
+    print(f"Found {len(obs_df)} observations after initial filter")
 
     unit_ids = listify(unit_id)
     if len(unit_ids) > 0:
         obs_df = obs_df[obs_df.unit_id.isin(unit_ids)]
-        print(f'Found {len(obs_df)} observations after unit filter')
+        print(f"Found {len(obs_df)} observations after unit filter")
 
     obs_df = obs_df.reindex(sorted(obs_df.columns), axis=1)
-    obs_df = obs_df.sort_values(by=['sequence_time'])
+    obs_df = obs_df.sort_values(by=["sequence_time"])
 
     # Mean exposure per frame. `total_exptime` is summed over the frame
     # documents rather than read from a column only the index held, which is
     # why it is no longer null for exactly the long sequences anyone wants.
-    obs_df['exptime'] = obs_df.total_exptime / obs_df.num_frames
+    obs_df["exptime"] = obs_df.total_exptime / obs_df.num_frames
 
-    print(f'Returning {len(obs_df)} observations')
+    print(f"Returning {len(obs_df)} observations")
     return obs_df
 
 
-def get_all_observations(settings: SurveySettings = None,
-                         index_root=None) -> pd.DataFrame:
+def get_all_observations(settings: SurveySettings = None, index_root=None) -> pd.DataFrame:
     """Every sequence in the index, with its pointing attached.
 
     Reads ``observations.parquet``, the query surface `panoptes-pipeline`
@@ -264,7 +261,7 @@ def get_all_observations(settings: SurveySettings = None,
     settings = settings or SurveySettings()
     index_root = index_root if index_root is not None else settings.resolved_index_root
 
-    print(f'Getting list of observations from the index at {index_root}')
+    print(f"Getting list of observations from the index at {index_root}")
     obs_df = documents.read_index(index_root, documents.OBSERVATIONS_FILENAME)
 
     # Ask only for pointing columns the index actually has: they are not in the
@@ -276,7 +273,7 @@ def get_all_observations(settings: SurveySettings = None,
         columns=[name for name in POINTING_COLUMNS if name in available],
     )
 
-    logger.info(f'Found {len(obs_df)} total observations')
+    logger.info(f"Found {len(obs_df)} total observations")
     return add_pointing(obs_df, frames)
 
 

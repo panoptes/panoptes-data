@@ -50,7 +50,7 @@ from pyarrow import parquet
 #: Separator joining the levels of a flattened document key, matching
 #: `panoptes.pipeline.index.SEPARATOR`. Used when no ``schema.json`` declares
 #: one -- reading a tree directly does not require an index to exist.
-SEPARATOR = '_'
+SEPARATOR = "_"
 
 #: Document blocks that do not become columns, matching
 #: `panoptes.pipeline.index.DROPPED`. ``image.params`` is a whole settings dump
@@ -62,7 +62,7 @@ SEPARATOR = '_'
 #: reader that keeps them produces columns ``frames.parquet`` does not have,
 #: and the two ways into the same values stop agreeing about what they are
 #: called.
-DROPPED = (('image', 'params'),)
+DROPPED = (("image", "params"),)
 
 #: Columns the index guarantees in ``frames.parquet``, matching
 #: `panoptes.pipeline.index.REQUIRED_FRAME_COLUMNS`. The producer reindexes to
@@ -71,27 +71,27 @@ DROPPED = (('image', 'params'),)
 #: archive. Reading documents directly has to do the same or the two paths
 #: disagree in the other direction.
 REQUIRED_FRAME_COLUMNS = (
-    'unit_unit_id',
-    'sequence_sequence_id',
-    'sequence_sequence_time',
-    'sequence_field_name',
-    'sequence_camera_camera_id',
-    'sequence_camera_serial_number',
-    'image_uid',
-    'image_image_time',
-    'image_status',
-    'image_camera_exptime',
-    'image_params_fingerprint',
+    "unit_unit_id",
+    "sequence_sequence_id",
+    "sequence_sequence_time",
+    "sequence_field_name",
+    "sequence_camera_camera_id",
+    "sequence_camera_serial_number",
+    "image_uid",
+    "image_image_time",
+    "image_status",
+    "image_camera_exptime",
+    "image_params_fingerprint",
 )
 
 #: The documents, as `panoptes.pipeline.settings.FileSettings` names them.
-OBSERVATION_FILENAME = 'observation.json'
-METADATA_FILENAME = 'metadata.json'
+OBSERVATION_FILENAME = "observation.json"
+METADATA_FILENAME = "metadata.json"
 
 #: The index, as `panoptes.pipeline.index` names it.
-FRAMES_FILENAME = 'frames.parquet'
-OBSERVATIONS_FILENAME = 'observations.parquet'
-SCHEMA_FILENAME = 'schema.json'
+FRAMES_FILENAME = "frames.parquet"
+OBSERVATIONS_FILENAME = "observations.parquet"
+SCHEMA_FILENAME = "schema.json"
 
 #: The index schema version this package knows how to read. Bumped on the
 #: producing side when the column contract changes, which is the whole point:
@@ -100,13 +100,13 @@ SCHEMA_FILENAME = 'schema.json'
 SCHEMA_VERSION = 1
 
 NO_ROOT_MESSAGE = (
-    'No processed tree is configured, so there are no documents to read. Set '
-    'PANOPTES_PROCESSED_ROOT to the root of a tree written by '
-    'panoptes-pipeline -- the directory holding the unit folders, so that '
-    '<root>/PAN012/358d0f/20180824T035917/observation.json is a sequence '
-    'document. This package no longer reads the Firestore-derived '
-    'observations.csv or the get-observation-info cloud function; both were '
-    'downstream of a pipeline that stopped producing them.'
+    "No processed tree is configured, so there are no documents to read. Set "
+    "PANOPTES_PROCESSED_ROOT to the root of a tree written by "
+    "panoptes-pipeline -- the directory holding the unit folders, so that "
+    "<root>/PAN012/358d0f/20180824T035917/observation.json is a sequence "
+    "document. This package no longer reads the Firestore-derived "
+    "observations.csv or the get-observation-info cloud function; both were "
+    "downstream of a pipeline that stopped producing them."
 )
 
 
@@ -118,8 +118,9 @@ class SchemaVersionError(RuntimeError):
     """The index declares a column contract this package does not know."""
 
 
-def flatten(document: Mapping[str, Any], prefix: str = '',
-            separator: str = SEPARATOR) -> dict[str, Any]:
+def flatten(
+    document: Mapping[str, Any], prefix: str = "", separator: str = SEPARATOR
+) -> dict[str, Any]:
     """Flatten nested maps into single-level keys joined by `separator`.
 
     ``{"image": {"camera": {"exptime": 120.0}}}`` becomes
@@ -136,9 +137,9 @@ def flatten(document: Mapping[str, Any], prefix: str = '',
     """
     flat: dict[str, Any] = {}
     for key, value in document.items():
-        name = f'{prefix}{key}'
+        name = f"{prefix}{key}"
         if isinstance(value, Mapping):
-            flat.update(flatten(value, f'{name}{separator}', separator=separator))
+            flat.update(flatten(value, f"{name}{separator}", separator=separator))
         else:
             flat[name] = value
     return flat
@@ -166,18 +167,18 @@ def read_schema(index_root: Path | str) -> dict[str, Any] | None:
     try:
         manifest = json.loads(path.read_text())
     except (OSError, UnicodeError, json.JSONDecodeError) as e:
-        raise SchemaVersionError(f'The index manifest at {path} could not be read: {e}') from e
+        raise SchemaVersionError(f"The index manifest at {path} could not be read: {e}") from e
 
     if not isinstance(manifest, Mapping):
-        raise SchemaVersionError(f'The index manifest at {path} is not an object.')
+        raise SchemaVersionError(f"The index manifest at {path} is not an object.")
 
-    version = manifest.get('version')
+    version = manifest.get("version")
     if version != SCHEMA_VERSION:
         raise SchemaVersionError(
-            f'The index at {index_root} declares schema version {version!r}, and this '
-            f'version of panoptes-data reads version {SCHEMA_VERSION}. The column '
-            f'contract changed on the producing side; upgrade panoptes-data rather '
-            f'than reading the index against the wrong vocabulary.'
+            f"The index at {index_root} declares schema version {version!r}, and this "
+            f"version of panoptes-data reads version {SCHEMA_VERSION}. The column "
+            f"contract changed on the producing side; upgrade panoptes-data rather "
+            f"than reading the index against the wrong vocabulary."
         )
 
     return dict(manifest)
@@ -207,17 +208,18 @@ def contract_for(index_root: Path | str | None) -> Contract:
     if manifest is None:
         return Contract()
 
-    dropped = manifest.get('dropped')
-    required = manifest.get('required_frame_columns')
+    dropped = manifest.get("dropped")
+    required = manifest.get("required_frame_columns")
     return Contract(
-        separator=manifest.get('separator') or SEPARATOR,
+        separator=manifest.get("separator") or SEPARATOR,
         dropped=tuple(tuple(block) for block in dropped) if dropped else (),
         required_frame_columns=tuple(required) if required else (),
     )
 
 
-def drop_blocks(document: dict[str, Any],
-                dropped: tuple[tuple[str, ...], ...] = DROPPED) -> dict[str, Any]:
+def drop_blocks(
+    document: dict[str, Any], dropped: tuple[tuple[str, ...], ...] = DROPPED
+) -> dict[str, Any]:
     """Remove the declared blocks from `document`, in place, returning it."""
     for block in dropped:
         *parents, leaf = block
@@ -246,13 +248,13 @@ def sequence_directory(processed_root: Path | str, sequence_id: str) -> Path:
         ValueError: if `sequence_id` is not a well-formed sequence identifier.
     """
     try:
-        unit_id, camera_id, sequence_time = str(sequence_id).split('_')
-        path_info = ImagePathInfo(path=f'{unit_id}/{camera_id}/{sequence_time}/{sequence_time}')
+        unit_id, camera_id, sequence_time = str(sequence_id).split("_")
+        path_info = ImagePathInfo(path=f"{unit_id}/{camera_id}/{sequence_time}/{sequence_time}")
     except ValueError as e:
         raise ValueError(
-            f'{sequence_id!r} is not a well-formed sequence id, so no directory in the '
-            f'processed tree corresponds to it. It should look like '
-            f'PAN012_358d0f_20180824T035917: {e}'
+            f"{sequence_id!r} is not a well-formed sequence id, so no directory in the "
+            f"processed tree corresponds to it. It should look like "
+            f"PAN012_358d0f_20180824T035917: {e}"
         ) from e
 
     return Path(processed_root) / path_info.as_path().parent
@@ -271,8 +273,8 @@ def require_root(root: Path | str | None, what: str) -> Path:
     root = Path(root)
     if not root.is_dir():
         raise DocumentsUnavailableError(
-            f'The {what} {root} is not a directory. It should point at the directory '
-            f'holding the unit folders, e.g. <root>/PAN012/358d0f/20180824T035917/.'
+            f"The {what} {root} is not a directory. It should point at the directory "
+            f"holding the unit folders, e.g. <root>/PAN012/358d0f/20180824T035917/."
         )
 
     return root
@@ -286,7 +288,7 @@ def find_frame_documents(processed_root: Path | str, sequence_id: str) -> Iterat
     rows in the same order.
     """
     directory = sequence_directory(processed_root, sequence_id)
-    return iter(sorted(directory.glob(f'*/{METADATA_FILENAME}')))
+    return iter(sorted(directory.glob(f"*/{METADATA_FILENAME}")))
 
 
 def read_document(path: Path | str) -> dict[str, Any] | None:
@@ -305,8 +307,9 @@ def read_document(path: Path | str) -> dict[str, Any] | None:
     return document if isinstance(document, dict) else None
 
 
-def read_observation(processed_root: Path | str, sequence_id: str,
-                     contract: Contract | None = None) -> dict[str, Any]:
+def read_observation(
+    processed_root: Path | str, sequence_id: str, contract: Contract | None = None
+) -> dict[str, Any]:
     """The sequence's ``observation.json``, flattened.
 
     Raises:
@@ -318,16 +321,17 @@ def read_observation(processed_root: Path | str, sequence_id: str,
     document = read_document(path)
     if document is None:
         raise DocumentsUnavailableError(
-            f'No readable observation document for {sequence_id} at {path}. The '
-            f'sequence is not in this processed tree, or the pipeline has not '
-            f'aggregated it yet.'
+            f"No readable observation document for {sequence_id} at {path}. The "
+            f"sequence is not in this processed tree, or the pipeline has not "
+            f"aggregated it yet."
         )
 
     return flatten(document, separator=(contract or Contract()).separator)
 
 
-def read_frames(processed_root: Path | str, sequence_id: str,
-                contract: Contract | None = None) -> pd.DataFrame:
+def read_frames(
+    processed_root: Path | str, sequence_id: str, contract: Contract | None = None
+) -> pd.DataFrame:
     """One row per frame of `sequence_id`, from its ``metadata.json`` documents.
 
     The rows carry the same column names `frames.parquet` does, which takes two
@@ -358,23 +362,23 @@ def read_frames(processed_root: Path | str, sequence_id: str,
     # counts more frames than that, the missing ones would simply not appear --
     # a shorter table that reads as a smaller observation rather than as an
     # incomplete one.
-    expected = (read_document(
-        sequence_directory(processed_root, sequence_id) / OBSERVATION_FILENAME
-    ) or {}).get('num_frames')
+    expected = (
+        read_document(sequence_directory(processed_root, sequence_id) / OBSERVATION_FILENAME) or {}
+    ).get("num_frames")
     if isinstance(expected, int) and len(paths) < expected:
         raise DocumentsUnavailableError(
-            f'{sequence_id} has {len(paths)} frame document(s) under '
-            f'{sequence_directory(processed_root, sequence_id)}, but its observation '
-            f'document counts {expected} frame(s). The tree is incomplete for this '
-            f'sequence; reading it would report a shorter observation rather than a '
-            f'partial one.'
+            f"{sequence_id} has {len(paths)} frame document(s) under "
+            f"{sequence_directory(processed_root, sequence_id)}, but its observation "
+            f"document counts {expected} frame(s). The tree is incomplete for this "
+            f"sequence; reading it would report a shorter observation rather than a "
+            f"partial one."
         )
 
     if not paths:
         raise DocumentsUnavailableError(
-            f'No frame documents for {sequence_id} under '
-            f'{sequence_directory(processed_root, sequence_id)}. The sequence is not '
-            f'in this processed tree, or none of its frames have been processed.'
+            f"No frame documents for {sequence_id} under "
+            f"{sequence_directory(processed_root, sequence_id)}. The sequence is not "
+            f"in this processed tree, or none of its frames have been processed."
         )
 
     rows = []
@@ -382,13 +386,11 @@ def read_frames(processed_root: Path | str, sequence_id: str,
         document = read_document(path)
         if document is None:
             raise DocumentsUnavailableError(
-                f'The frame document {path} could not be read, so the metadata for '
-                f'{sequence_id} would be short by one frame rather than wrong in a '
-                f'way you could see. Reprocess that frame.'
+                f"The frame document {path} could not be read, so the metadata for "
+                f"{sequence_id} would be short by one frame rather than wrong in a "
+                f"way you could see. Reprocess that frame."
             )
-        rows.append(
-            flatten(drop_blocks(document, contract.dropped), separator=contract.separator)
-        )
+        rows.append(flatten(drop_blocks(document, contract.dropped), separator=contract.separator))
 
     # `pandas` unions the keys, so a field absent from one document arrives as
     # a null in that row rather than failing the read. Documents written by an
@@ -413,21 +415,22 @@ def index_columns(index_root: Path | str | None, filename: str) -> list[str]:
         SchemaVersionError: if the index declares a version this package does
             not read.
     """
-    index_root = require_root(index_root, 'index root')
+    index_root = require_root(index_root, "index root")
     read_schema(index_root)
 
     path = index_root / filename
     if not path.is_file():
         raise DocumentsUnavailableError(
-            f'No {filename} at {index_root}. Build the index over the processed tree '
-            f'with panoptes-pipeline before querying it.'
+            f"No {filename} at {index_root}. Build the index over the processed tree "
+            f"with panoptes-pipeline before querying it."
         )
 
     return list(parquet.read_schema(path).names)
 
 
-def read_index(index_root: Path | str | None, filename: str,
-               columns: list[str] | None = None) -> pd.DataFrame:
+def read_index(
+    index_root: Path | str | None, filename: str, columns: list[str] | None = None
+) -> pd.DataFrame:
     """Read one of the index files, with its dtypes intact.
 
     `columns` is pushed down into the parquet read, so asking for four columns
@@ -445,19 +448,19 @@ def read_index(index_root: Path | str | None, filename: str,
         SchemaVersionError: if the index declares a schema version this package
             does not read.
     """
-    index_root = require_root(index_root, 'index root')
+    index_root = require_root(index_root, "index root")
     read_schema(index_root)
 
     path = index_root / filename
     if not path.is_file():
         raise DocumentsUnavailableError(
-            f'No {filename} at {index_root}. Build the index over the processed tree '
-            f'with panoptes-pipeline before querying it.'
+            f"No {filename} at {index_root}. Build the index over the processed tree "
+            f"with panoptes-pipeline before querying it."
         )
 
     try:
         return pd.read_parquet(path, columns=columns)
     except (KeyError, ValueError) as e:
         raise DocumentsUnavailableError(
-            f'{path} does not carry the column(s) asked for: {e}'
+            f"{path} does not carry the column(s) asked for: {e}"
         ) from e
