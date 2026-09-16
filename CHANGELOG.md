@@ -4,6 +4,124 @@
 
 ### Changed
 
+- Metadata is read from the documents `panoptes-pipeline` writes -- an
+  `observation.json` per sequence, a `metadata.json` per frame, and the parquet
+  index built by walking them -- rather than from a Firestore-derived
+  `observations.csv` and a cloud function. Both were downstream of a pipeline
+  that stopped producing them, so both had been describing an archive nothing
+  was adding to. See [#15][issue-15] and the pipeline's [data contract][contract].
+
+  This is the durable fix for a recurring class of bug rather than one more
+  patch in it. [#12][issue-12] happened because nothing ever *named* the field
+  holding an image URL, so the reader guessed and the guess went stale in 2025.
+  [#13][issue-13] happened because nothing named the type of a camera serial, so
+  `pd.read_csv` inferred float64 and turned `032071000633` into `3.207100e+10`.
+  Under the contract the fields are named, the reader reads those names, and a
+  change on the producing side is a visible change to a document instead of an
+  `AttributeError` two years later.
+
+  There is no fallback to the old path. It is not that the cloud sources are
+  deprecated; it is that nothing produces them.
+
+- Columns are the contract's flattened document names -- `image_uid`,
+  `image_status`, `image_camera_exptime`, `sequence_coordinates_mount_ra`,
+  `num_frames`, `num_usable`, `duration_minutes`, `sequence_sequence_id` --
+  which are the names the index carries for the same values. They are joined
+  with `_` and never `.`: a dotted name is a *view* over a nested map rather
+  than storage, and the dotted `camera.serial_number` in the old summary was
+  exactly that confusion.
+
+  This renames every column a caller touches. `uid` is `image_uid`,
+  `num_images` is `num_frames`, `coordinates.mount_ra` is `mount_ra`, `time` is
+  `sequence_time`.
+
+- `search_observations` reads `observations.parquet`, so it can express what the
+  summary could not. `num_usable` counts frames the pipeline processed
+  successfully, as distinct from frames that exist; `duration_minutes` comes
+  from the frames' own timestamps; and `total_exptime` is a sum over per-frame
+  records rather than a number the index alone held, which is why it is no
+  longer null for exactly the long sequences anyone wants.
+
+  Its `min_num_images` argument is now `min_num_frames`, matching the column,
+  and the `status` argument is gone: the observation index records no
+  observation status, and `num_usable` is the better question anyway.
+
+- A search cone is widened, per sequence, by that sequence's own pointing drift.
+  A sequence has no single position -- `RA-MNT` and `DEC-MNT` are per-frame
+  readings, and older observations wander substantially over a night -- so
+  `get_all_observations` attaches the mean of a sequence's frame pointings along
+  with the largest deviation from it, and the search adds that deviation to the
+  radius. An observation whose mean sits outside the cone but which spent half
+  the night inside it is now found.
+
+  RA is averaged as an angle rather than as a number, and compared as one, so a
+  target near 0h works. The previous version compared raw degrees, which made
+  any cone spanning 0h return nothing at all.
+
+- `search_observations` no longer mutates a caller-supplied `source` DataFrame.
+  It ran `query(..., inplace=True)` on whatever it was handed.
+
+- Two hacks that patched the CSV are gone with it: the rename of a
+  `camera_camera_id` column that never existed under that name, and the rewrite
+  of any `field_name` ending in `00:00:42+00:00` to `M42`. Both were repairs to
+  a generated summary, and a reader silently rewriting a field is the thing this
+  change exists to stop.
+
+### Added
+
+- `PANOPTES_PROCESSED_ROOT` names the pipeline's document tree, and
+  `PANOPTES_INDEX_ROOT` names where the parquet index lives -- defaulting to the
+  processed tree, which is where the pipeline builds it. It is a separate
+  setting because the index is regenerable, so nothing is lost by keeping it
+  beside a read-only or mirrored processed tree rather than in it.
+
+  This is a third root, and it is deliberately not `PANOPTES_ARCHIVE_ROOT`. That
+  one still points at the **raw** frames, which are genuinely upstream of the
+  pipeline: outputs should be regenerable without touching the inputs.
+
+- `panoptes.data.documents` reads the tree and the index: `read_observation`,
+  `read_frames`, `read_index`, and the `flatten` that turns a nested document
+  into the index's column names. It also reads `schema.json` back, so the
+  separator and the schema version come from what the producer declared rather
+  than from what this package assumed. An index built by a newer pipeline is
+  refused with a message saying so, rather than read against the wrong
+  vocabulary.
+
+- `ObservationInfo` exposes the sequence's `observation.json` as `.observation`,
+  with `.status` and `.params_fingerprint` on top of it. The fingerprint is the
+  pipeline's cache key: two observations with different fingerprints were not
+  made by the same code with the same parameters.
+
+- Building `ObservationInfo` from a sequence id alone now has metadata. `.meta`
+  used to be an empty dict unless a search result was passed in, which made
+  "construct from an id" the second-class way of using the class; the
+  observation document is the metadata, so now it is not.
+
+- `ObservationInfo` takes a `processed_root` argument, overriding the setting
+  for one instance, as `get_image_list` already took `archive_root`.
+
+### Fixed
+
+- A frame document that cannot be read raises rather than being skipped. The
+  pipeline's index walk skips them, correctly -- one bad file must not cost an
+  index over half a million frames -- but the unit of work here is a single
+  observation, and a frame silently missing from one reads as an observation
+  with fewer frames. That is the same failure a partial local archive already
+  refused to paper over.
+
+### Removed
+
+- `SurveySettings.img_metadata_url` and `SurveySettings.observations_url`, and
+  with them the last two things this package fetched over the network. Nothing
+  serves either one with current data.
+
+[issue-12]: https://github.com/panoptes/panoptes-data/issues/12
+[issue-13]: https://github.com/panoptes/panoptes-data/issues/13
+[issue-15]: https://github.com/panoptes/panoptes-data/issues/15
+[contract]: https://github.com/panoptes/panoptes-pipeline/blob/main/plans/data-contract.md
+
+### Release tooling
+
 - Releases are published to PyPI with Trusted Publishing rather than a
   long-lived API token, so they now carry build attestations that anyone can
   verify. The publish action produces those by default, but an explicit

@@ -21,9 +21,9 @@ def download(sequence_id: str | None = typer.Argument(..., help='Sequence ID for
                  help='Output directory for images, defaults to sequence_id.'
              ),
              image_query: str = typer.Option(
-                 'status!="ERROR"',
+                 'image_status!="ERROR"',
                  '--image-query', '-q',
-                 help='Query for images, default \'status!="ERROR"\''
+                 help='Query for images, default \'image_status!="ERROR"\''
              ),
              ) -> list[str]:
     """Deprecated: archived frames are not currently available for download.
@@ -94,17 +94,19 @@ def get_metadata(
             results_df = search_observations(
                 unit_id=unit_id.upper(),
                 start_date=start_date,
-                by_name='M42',
-                radius=290
+                end_date=end_date,
+                # There is no all-sky search yet, so a cone wide enough to be
+                # one stands in for it. See panoptes/panoptes-data#14.
+                ra=180, dec=0, radius=290
             )
 
             dfs = list()
             for idx, rec in (pbar := tqdm(results_df.iterrows(), total=len(results_df))):
                 try:
-                    pbar.set_description(f'Getting metadata for {rec["sequence_id"]}')
+                    pbar.set_description(f'Getting metadata for {rec["sequence_sequence_id"]}')
                     dfs.append(ObservationInfo(meta=rec).image_metadata)
-                except Exception:
-                    pbar.write(f'Error in {idx} {rec["sequence_id"]}')
+                except Exception as e:
+                    pbar.write(f'Error in {idx} {rec["sequence_sequence_id"]}: {e!r}')
 
             pd.concat(dfs).to_csv(output_fn)
 
@@ -147,9 +149,9 @@ def search(
         10, '--radius', '-r',
         help='Radius in degrees for search.'
     ),
-    min_num_images: int = typer.Option(
-        1, '--min-num-images', '-m',
-        help='Minimum number of images.'
+    min_num_frames: int = typer.Option(
+        1, '--min-num-frames', '-m',
+        help='Minimum number of frames the observation has a document for.'
     ),
 
 ):
@@ -161,7 +163,7 @@ def search(
         by_name=name,
         ra=ra,
         dec=dec,
-        min_num_images=min_num_images,
+        min_num_frames=min_num_frames,
         radius=radius
     )
 
@@ -169,9 +171,9 @@ def search(
         print('[red]No results found.')
         return
 
-    display_cols = ['field_name', 'unit_id', 'coordinates.mount_ra', 'coordinates.mount_dec', 'num_images', 'exptime',
-                    'total_exptime', 'time']
-    markdown_table = results.set_index('sequence_id')[display_cols].to_markdown()
+    display_cols = ['field_name', 'unit_id', 'mount_ra', 'mount_dec', 'num_frames', 'num_usable',
+                    'exptime', 'total_exptime', 'duration_minutes', 'sequence_time']
+    markdown_table = results.set_index('sequence_sequence_id')[display_cols].to_markdown()
     print(markdown_table)
     print(f'Found {len(results)} observations.')
 

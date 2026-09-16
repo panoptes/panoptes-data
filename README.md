@@ -5,6 +5,17 @@
 Tools for searching PANOPTES observations and reading their frames from a
 local copy of the archive.
 
+Metadata comes from the documents [panoptes-pipeline][pipeline] writes -- an
+`observation.json` per sequence, a `metadata.json` per frame, and a parquet
+index built by walking them. It used to come from a Firestore-derived
+`observations.csv` and a cloud function, both downstream of a pipeline that
+stopped producing them; see [#15][issue-15] and the pipeline's
+[data contract][contract].
+
+[pipeline]: https://github.com/panoptes/panoptes-pipeline
+[contract]: https://github.com/panoptes/panoptes-pipeline/blob/main/plans/data-contract.md
+[issue-15]: https://github.com/panoptes/panoptes-data/issues/15
+
 ## Install
 
 Install from pip:
@@ -26,34 +37,51 @@ from panoptes.data.observations import ObservationInfo
 # Find some observations
 results = search_observations(by_name='M42')
 
-# Use last result entry to create ObservationInfo object.
+# Use a result entry to create an ObservationInfo object.
 obs_info = ObservationInfo(meta=results.iloc[0])
-print(obs_info.meta)
 
-# Create an ObservationInfo object directly from a sequence_id.
+# Or go straight to a sequence id -- the observation document is read either
+# way, so this is no longer the lesser way in.
 obs_info = ObservationInfo('PAN001_14d3bd_20180113T052325')
-# But then there is no metadata:
 print(obs_info.meta)
 ```
 
 ```text
-Sample output (truncated):
+Sample output (truncated), from the sequence's observation.json:
 
-camera_id                                           14d3bd
-camera_lens_serial_number                        HA0028608
-camera_serial_number                           12070048413
-coordinates_mount_dec                            -6.229778
-coordinates_mount_ra                               76.0815
-exptime                                              120.0
-field_name                                         Wasp 35
-num_images                                            28.0
-sequence_id                  PAN001_14d3bd_20180113T052325
-software_version                                POCSv0.6.0
-time                             2018-01-13 05:23:25+00:00
-total_exptime                                       3360.0
-unit_id                                             PAN001
-Name: 6121, dtype: object
+sequence_id                       PAN001_14d3bd_20180113T052325
+unit_id                                                  PAN001
+camera_id                                                14d3bd
+sequence_time                         2018-01-13T05:23:25+00:00
+num_frames                                                   28
+num_processed                                                28
+status                                                  MATCHED
+params_fingerprint                                 a1b2c3d4e5f6
+sequence_field_name                                     Wasp 35
+sequence_camera_camera_id                                14d3bd
+sequence_camera_serial_number                       12070048413
+sequence_camera_lens_serial_number                    HA0028608
+sequence_coordinates_mount_ra                           76.0815
+sequence_coordinates_mount_dec                        -6.229778
+sequence_software_version                            POCSv0.6.0
 ```
+
+The names are the document's nested keys joined with `_`, which is exactly what
+the index calls the same values. A dotted name like `camera.serial_number` is a
+*view* over a nested map, never storage -- which is the confusion the old CSV
+built in.
+
+`search_observations` reads `observations.parquet`, which groups the frame
+records by sequence, so it can now express things the summary could not:
+`num_usable`, `duration_minutes`, and a `total_exptime` that is populated for
+the long sequences where the CSV had null and nowhere to recover it from.
+
+A sequence has no single position -- `RA-MNT` and `DEC-MNT` are per-frame
+readings, and older observations drift substantially over a night. So each
+sequence gets the mean of its frames' pointings *and* the largest deviation
+from that mean, and a search cone is widened per sequence by that sequence's own
+drift. An observation whose mean sits just outside the cone, but which spent
+half the night inside it, is found.
 
 ### Configuration
 
@@ -67,6 +95,7 @@ cp .env.example .env
 
 ```ini
 # .env
+PANOPTES_PROCESSED_ROOT=/data/panoptes-processed
 PANOPTES_ARCHIVE_ROOT=/data/panoptes-archive
 ```
 
@@ -74,7 +103,7 @@ A real environment variable beats the file, and an argument beats both, so a
 one-off run needs no edit:
 
 ```bash
-PANOPTES_ARCHIVE_ROOT=/mnt/other-copy panoptes-data search --name M42
+PANOPTES_PROCESSED_ROOT=/mnt/other-copy panoptes-data search --name M42
 ```
 
 The `.env` is read from the current working directory, not from wherever the
@@ -86,14 +115,43 @@ take effect.
 
 | Setting | What it locates |
 | --- | --- |
-| `PANOPTES_ARCHIVE_ROOT` | A local copy of the archive. No default; without it frames resolve to URLs that cannot be fetched. |
+| `PANOPTES_PROCESSED_ROOT` | The pipeline's document tree. No default; without it there is no metadata to read. |
+| `PANOPTES_INDEX_ROOT` | The parquet index. Defaults to the processed tree, where the pipeline builds it. |
+| `PANOPTES_ARCHIVE_ROOT` | A local copy of the *raw* archive. No default; without it frames resolve to URLs that cannot be fetched. |
 | `PANOPTES_IMG_BASE_URL`, `PANOPTES_IMG_BUCKET` | The cloud archive as it was laid out. |
-| `PANOPTES_IMG_METADATA_URL` | Per-sequence image metadata. |
-| `PANOPTES_OBSERVATIONS_URL` | The `observations.csv` summary that `search_observations` reads. |
+
+The processed tree and the raw archive are two different trees, on purpose:
+outputs should be regenerable without touching the inputs, and the raw copy may
+be read-only or mirrored.
+
+### Reading per-frame metadata
+
+`ObservationInfo.image_metadata` is one row per `metadata.json`, with the
+document's nested maps flattened into the same column names the index carries:
+
+```py
+obs_info = ObservationInfo('PAN012_358d0f_20180824T035917')
+
+obs_info.image_metadata[['image_uid', 'image_status', 'image_camera_exptime']]
+
+# Frames the pipeline actually matched, rather than frames that merely exist.
+obs_info = ObservationInfo('PAN012_358d0f_20180824T035917',
+                           image_query='image_status == "MATCHED"')
+```
+
+Every frame of the sequence has to have a readable document. One that does not
+raises, rather than quietly producing an observation with fewer frames -- the
+same rule the local archive follows below.
+
+Browsable URLs are decorations added by whatever uploads the products, not part
+of the document, so most sequences carry none. `obs_info.public_urls` returns
+whichever `*_url` fields are present, which may be no columns at all. That is
+the normal case, not a broken one: frame locations come from `image_list`.
 
 ### Reading images
 
-Frames are read from a local copy of the archive. `PANOPTES_ARCHIVE_ROOT`
+Frames are read from a local copy of the **raw** archive, which is a different
+tree from the processed one the metadata came from. `PANOPTES_ARCHIVE_ROOT`
 points at the directory holding the unit folders -- the archive keeps the
 bucket's layout, so that is
 `<root>/PAN012/358d0f/20180824T035917/20180824T040118.fits.fz` -- and a
@@ -131,21 +189,24 @@ There is a simple command line tool that allows for both searching of observatio
 #### Search for observations:
 
 ```bash
-panoptes-data search --name M42 --min-num-images 90
+panoptes-data search --name M42 --min-num-frames 90
 ```
 
 Example table output:
 
 ```text
-| sequence_id                   | field_name   | unit_id   |   coordinates_mount_ra |   coordinates_mount_dec |   num_images |   exptime |   total_exptime | time                      |
-|:------------------------------|:-------------|:----------|-----------------------:|------------------------:|-------------:|----------:|----------------:|:--------------------------|
-| PAN022_977c86_20220108T090553 | M42          | PAN022    |                83.8221 |                -5.39111 |           95 |   90      |            8550 | 2022-01-08 09:05:53+00:00 |
-| PAN022_538cc6_20220108T090553 | M42          | PAN022    |                83.8221 |                -5.39111 |           95 |   89      |            8455 | 2022-01-08 09:05:53+00:00 |
-| PAN019_42433a_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   90      |            8100 | 2022-01-14 08:57:22+00:00 |
-| PAN019_c623e9_20220114T085722 | M42          | PAN019    |                83.8221 |                -5.39111 |           90 |   89.0222 |            8012 | 2022-01-14 08:57:22+00:00 |
-| PAN019_c623e9_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   89.019  |            9347 | 2022-01-15 08:21:08+00:00 |
-| PAN019_42433a_20220115T082108 | M42          | PAN019    |                83.8221 |                -5.39111 |          105 |   90.0095 |            9451 | 2022-01-15 08:21:08+00:00 |
+| sequence_sequence_id          | field_name   | unit_id   |   mount_ra |   mount_dec |   num_frames |   num_usable |   exptime |   total_exptime |   duration_minutes | sequence_time             |
+|:------------------------------|:-------------|:----------|-----------:|------------:|-------------:|-------------:|----------:|----------------:|-------------------:|:--------------------------|
+| PAN022_977c86_20220108T090553 | M42          | PAN022    |    83.8221 |    -5.39111 |           95 |           95 |   90      |            8550 |              196.4 | 2022-01-08 09:05:53+00:00 |
+| PAN022_538cc6_20220108T090553 | M42          | PAN022    |    83.8221 |    -5.39111 |           95 |           93 |   89      |            8455 |              196.1 | 2022-01-08 09:05:53+00:00 |
+| PAN019_42433a_20220114T085722 | M42          | PAN019    |    83.8232 |    -5.39004 |           90 |           90 |   90      |            8100 |              188.7 | 2022-01-14 08:57:22+00:00 |
+| PAN019_c623e9_20220114T085722 | M42          | PAN019    |    83.8232 |    -5.39004 |           90 |           88 |   89.0222 |            8012 |              188.7 | 2022-01-14 08:57:22+00:00 |
 ```
+
+`num_frames` counts frames the pipeline has a document for; `num_usable` counts
+the ones it processed successfully. They are not the same number -- one
+372-frame sequence in the archive has metadata for 310 -- and the old summary
+could only express the first.
 
 #### Get all metadata for a unit in a given date range:
 

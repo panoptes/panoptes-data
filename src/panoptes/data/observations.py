@@ -1,19 +1,27 @@
 import warnings
+from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
 from astropy.nddata import CCDData, Cutout2D
 from astropy.wcs import FITSFixedWarning
 
+from panoptes.data import documents
 from panoptes.data.settings import SurveySettings
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.images.fits import ImagePathInfo
 
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
-# The metadata columns this class actually needs. Everything else, including
-# every URL column, is optional -- see `ObservationInfo.public_urls`.
-REQUIRED_COLUMNS = ('time', 'uid')
+# The flattened document fields this class actually needs, named by the data
+# contract rather than guessed at. Everything else, including every URL field,
+# is optional -- see `ObservationInfo.public_urls`.
+REQUIRED_FRAME_FIELDS = ('image_uid', 'image_image_time')
+
+# Where a sequence id is found on a metadata record. The observation index
+# groups on `sequence_sequence_id`, so that is what a row of search results
+# carries; a flattened `observation.json` carries the top-level `sequence_id`.
+SEQUENCE_ID_FIELDS = ('sequence_sequence_id', 'sequence_id')
 
 IMAGES_UNAVAILABLE_MESSAGE = (
     'Archived frames cannot be downloaded. Every URL the metadata carries '
@@ -30,20 +38,54 @@ class ImagesUnavailableError(RuntimeError):
     """Raised when a frame is asked for and no fetchable source exists."""
 
 
+def sequence_id_of(meta) -> str:
+    """The sequence id carried by a metadata record.
+
+    Accepts a `pandas.Series` from search results, a flattened document, or a
+    row object with attributes, and looks only at the names the contract
+    declares. Guessing which field holds an identifier is what
+    panoptes/panoptes-data#12 and #13 both were, so an unrecognized record says
+    which names it looked for rather than reaching for the first thing that
+    looks like an id.
+
+    Raises:
+        ValueError: if none of `SEQUENCE_ID_FIELDS` is present.
+    """
+    if isinstance(meta, Mapping | pd.Series):
+        keys = list(meta.keys())
+        for field in SEQUENCE_ID_FIELDS:
+            if field in keys:
+                return str(meta[field])
+    else:
+        keys = [name for name in dir(meta) if not name.startswith('_')]
+        for field in SEQUENCE_ID_FIELDS:
+            if hasattr(meta, field):
+                return str(getattr(meta, field))
+
+    raise ValueError(
+        f'The record given as `meta` carries no sequence id: looked for '
+        f'{list(SEQUENCE_ID_FIELDS)} and found {sorted(keys)}.'
+    )
+
+
 class ObservationInfo:
     """A container class for information about an Observation."""
 
-    def __init__(self, sequence_id=None, meta=None, image_query=''):
+    def __init__(self, sequence_id=None, meta=None, image_query='',
+                 processed_root: Path | str | None = None):
         """Initialize the observation info with a sequence_id.
 
-        This object will be populated with information about the observation, including
-        image metadata and the location of each raw frame. It is mostly a convenience
-        class for accessing information about an observation.
+        The metadata comes from the documents `panoptes-pipeline` wrote: the
+        sequence's ``observation.json`` and one ``metadata.json`` per frame,
+        under ``PANOPTES_PROCESSED_ROOT``. It used to come from a Firestore
+        summary and a cloud function, both downstream of a pipeline that stopped
+        producing them; see panoptes/panoptes-data#15.
 
-        Where the frames resolve to depends on whether an archive root is
-        configured -- see `get_image_list`. With one, constructing this class
-        also asserts that every frame of the sequence is present in that local
-        copy.
+        Where the *frames* resolve to is a separate question with a separate
+        setting -- see `get_image_list`. Raw-frame discovery is genuinely
+        upstream of the pipeline and is unchanged. With an archive root
+        configured, constructing this class also asserts that every frame of the
+        sequence is present in that local copy.
 
         Example:
 
@@ -57,30 +99,63 @@ class ObservationInfo:
 
         Args:
             sequence_id: The sequence id of the observation.
-            meta: A dictionary of metadata for the observation.
-            image_query: A query string to use when querying for images, e.g. 'status != "ERROR"'
+            meta: A record carrying a sequence id, such as a row of
+                `search_observations` results. Supplying it saves nothing --
+                the observation document is read either way -- but it keeps the
+                search result and the observation together.
+            image_query: A query string to use when querying for images, e.g.
+                'image_status != "ERROR"'. The field names are the contract's,
+                so this is `image_status` and not `status`.
+            processed_root: The tree of pipeline documents, overriding the
+                ``processed_root`` setting for this instance.
         """
         self._settings = SurveySettings()
+        self._processed_root = documents.require_root(
+            processed_root if processed_root is not None else self._settings.processed_root,
+            'processed root',
+        )
+        self._separator = documents.separator_for(self._settings.resolved_index_root)
 
-        if meta is not None:
-            self.sequence_id = meta.sequence_id
-            self.meta = meta
-        else:
-            self.sequence_id = sequence_id
-            self.meta = dict()
+        self.sequence_id = sequence_id_of(meta) if meta is not None else sequence_id
+        if self.sequence_id is None:
+            raise ValueError('One of `sequence_id` or `meta` is required.')
+
+        self.observation = documents.read_observation(
+            self._processed_root, self.sequence_id, separator=self._separator
+        )
+        # `meta` used to be empty whenever the class was built from a sequence
+        # id alone, which made "construct from an id" the second-class way of
+        # using it. The observation document is the metadata, so now it is not.
+        self.meta = meta if meta is not None else self.observation
 
         self.image_metadata = self.get_metadata(query=image_query)
         self.image_list = self.get_image_list()
 
     @property
+    def status(self):
+        """The `ObservationStatus` name the pipeline last recorded, or None."""
+        return self.observation.get('status')
+
+    @property
+    def params_fingerprint(self):
+        """The digest of the settings this observation was produced with.
+
+        It is the pipeline's cache key (data contract 3.4): two observations
+        with different fingerprints were not made by the same code with the
+        same parameters, whatever else they have in common.
+        """
+        return self.observation.get('params_fingerprint')
+
+    @property
     def public_urls(self):
         """The browsable URLs carried by the metadata, if any.
 
-        Which ``*_url`` columns exist varies between records: ``public_url``
-        and ``raw_url`` on some, ``uploaded_public_url``, ``fits_public_url``
-        and ``jpg_public_url`` on others. They are for display and lookup only
-        -- the raw frame locations come from `get_image_list` -- so a record
-        with no URL column at all still works.
+        Under the contract these are decorations added by whatever uploads the
+        products, not part of the document the pipeline writes -- which is what
+        the old cloud orchestrator already treated them as, injecting
+        ``fits_public_url`` and ``assets`` *after* processing. So a document
+        with no URL field at all is the normal case, not the broken one, and
+        the raw frame locations come from `get_image_list` regardless.
 
         Returns:
             A DataFrame of whichever ``*_url`` columns are present, which may
@@ -111,20 +186,45 @@ class ObservationInfo:
         return ccd0
 
     def get_metadata(self, query=''):
-        """Download the image metadata associated with the observation."""
-        metadata_url = f'{self._settings.img_metadata_url.unicode_string()}?sequence_id={self.sequence_id}'
-        images_df = pd.read_csv(metadata_url)
+        """Read the per-frame documents of this observation.
 
-        missing = [col for col in REQUIRED_COLUMNS if col not in images_df.columns]
+        One row per ``metadata.json``, with the document's nested maps
+        flattened into column names -- ``image_camera_exptime``,
+        ``sequence_coordinates_mount_ra``, ``image_status`` -- which are the
+        same names the pipeline's ``frames.parquet`` carries for the same
+        values. `panoptes.data.documents` says why that mapping is a contract
+        rather than a convenience.
+
+        The rows are indexed on ``image_image_time`` and sorted, as they were
+        on ``time`` before. The column keeps its contract name as well as being
+        the index, so a query can still reach it.
+
+        Args:
+            query: A `pandas.DataFrame.query` string, applied after the index
+                is set, e.g. ``'image_status == "MATCHED"'``.
+
+        Raises:
+            DocumentsUnavailableError: if the sequence is not in the processed
+                tree, or one of its documents cannot be read.
+            ValueError: if a document is missing a field the contract requires.
+        """
+        images_df = documents.read_frames(
+            self._processed_root, self.sequence_id, separator=self._separator
+        )
+
+        missing = [field for field in REQUIRED_FRAME_FIELDS if field not in images_df.columns]
         if missing:
             raise ValueError(
-                f'Metadata for {self.sequence_id} is missing required '
-                f'column(s) {missing}; got {sorted(images_df.columns)}'
+                f'The frame documents for {self.sequence_id} are missing required '
+                f'field(s) {missing}; got {sorted(images_df.columns)}'
             )
 
-        # Set a time index.
-        images_df.time = pd.to_datetime(images_df.time)
-        images_df = images_df.set_index(['time']).sort_index()
+        # Set a time index, keeping the column: it is named by the contract and
+        # dropping it would make `query` unable to mention it.
+        images_df['image_image_time'] = pd.to_datetime(
+            images_df.image_image_time, format='mixed', utc=True
+        )
+        images_df = images_df.set_index('image_image_time', drop=False).sort_index()
 
         if query > '':
             images_df = images_df.query(query)
@@ -135,9 +235,10 @@ class ObservationInfo:
                        archive_root: Path | str | None = None):
         """Resolve the observation's raw frames to where they can be read.
 
-        Each frame's location is derived from its ``uid`` rather than read
-        from a URL column, which is not dependable (`public_urls`). The
-        ``uid`` is the archive path with underscores for separators, so
+        Each frame's location is derived from its ``image_uid``, which the
+        contract names (data contract 3.1) rather than leaving to be inferred
+        from whichever URL field a given era of record happened to carry. The
+        uid is the archive path with underscores for separators, so
         `ImagePathInfo` parses it and rebuilds the path below the bucket:
         ``PAN012/358d0f/20180824T035917/20180824T040118.fits.fz``.
 
@@ -153,7 +254,12 @@ class ObservationInfo:
           frame lives but nothing serves them (`download_images`), so this is
           a description of the archive, not a way into it.
 
-        Every frame named by the metadata must exist under the root. A partial
+        Note that this is the *raw* archive, not the processed tree the
+        metadata came from. The two are deliberately separate: outputs should
+        be regenerable without touching the inputs, and the raw copy may be
+        read-only or mirrored (data contract 5.3).
+
+        Every frame named by the documents must exist under the root. A partial
         archive raises rather than returning a shorter list, because a
         silently shorter list reads as an observation with fewer frames rather
         than as an incomplete copy. Pass no root -- or use `get_metadata`
@@ -166,18 +272,20 @@ class ObservationInfo:
              file_ext: The file extension of the images to retrieve. Matched
                 exactly against the local archive: the layout there is the
                 bucket's layout, and the extension is part of it.
-             archive_root: A local copy of the archive, overriding the
+             archive_root: A local copy of the raw archive, overriding the
                 ``archive_root`` setting for this call.
         Returns:
             A list of `Path` under an archive root, or of URL strings without
             one, in metadata order and one per image.
 
         Raises:
-            ValueError: if a ``uid`` is not a well-formed archive path.
+            ValueError: if an ``image_uid`` is not a well-formed archive path.
             FileNotFoundError: if a frame is missing from the local archive.
         """
         ext = file_ext.lstrip('.')
-        relative_paths = [self._frame_path(uid, ext) for uid in self.image_metadata.uid.values]
+        relative_paths = [
+            self._frame_path(uid, ext) for uid in self.image_metadata.image_uid.values
+        ]
 
         archive_root = archive_root or self._settings.archive_root
         if archive_root is None:
@@ -207,9 +315,9 @@ class ObservationInfo:
         return image_list
 
     def _frame_path(self, uid, ext: str) -> Path:
-        """The archive-relative path of one frame, from its ``uid``.
+        """The archive-relative path of one frame, from its ``image_uid``.
 
-        The ``uid`` is the archive path with underscores for separators, so
+        The uid is the archive path with underscores for separators, so
         `ImagePathInfo` both validates it and rebuilds the path.
         """
         try:
@@ -245,7 +353,7 @@ class ObservationInfo:
         raise ImagesUnavailableError(IMAGES_UNAVAILABLE_MESSAGE)
 
     def __str__(self):
-        return f'Obs: seq_id={self.sequence_id} num_images={len(self.image_list)}'
+        return f'Obs: seq_id={self.sequence_id} num_frames={len(self.image_list)}'
 
     def __repr__(self):
         return str(self)
