@@ -81,6 +81,7 @@ SIMULTANEOUS_COLUMNS = (
     "sequence_sequence_id",
     "unit_id",
     "camera_id",
+    "field_name",
     "start_time",
     "end_time",
     "num_frames",
@@ -335,7 +336,9 @@ def find_simultaneous(
 
     Args:
         observations: Sequences to pair, as `get_all_observations` or
-            `search_observations` returns them. Never modified in place.
+            `search_observations` returns them. Never modified in place. A
+            sequence with no `across` value, or with no extent, is dropped: it
+            cannot be shown to be different hardware or to have overlapped.
         across: The column that must *differ* between the two sequences of a
             pair -- ``'camera_id'`` for two bodies, which includes two cameras
             on one unit, or ``'unit_id'`` for two units.
@@ -348,8 +351,10 @@ def find_simultaneous(
 
     Returns:
         One row per pair, the columns of `SIMULTANEOUS_COLUMNS` suffixed ``_a``
-        and ``_b`` plus ``field_name`` and ``overlap_minutes``, earliest first.
-        A table with no pairs still has those columns.
+        and ``_b`` plus ``overlap_minutes``, earliest first. ``field_name`` is
+        the field the pair shares, and is null when the two sequences were on
+        different fields -- ``field_name_a`` and ``field_name_b`` always carry
+        both. A table with no pairs still has those columns.
 
     Raises:
         ValueError: if `across` is not a column to pair across, or if
@@ -383,7 +388,12 @@ def find_simultaneous(
     table = observations.copy()
     for name in ("start_time", "end_time"):
         table[name] = pd.to_datetime(table[name], format="mixed", utc=True, errors="coerce")
-    table = table.dropna(subset=["start_time", "end_time"])
+    # A null `across` value is dropped rather than compared. Two unknown camera
+    # ids are not known to be *different* hardware, so pairing them overclaims
+    # exactly as pairing two unrecorded fields would -- and comparing them is
+    # not even consistent: `nan != nan` invents a pair, while `pd.NA == pd.NA`
+    # raises when a branch tests it.
+    table = table.dropna(subset=["start_time", "end_time", across])
     # Carried into the pair rows even when the index did not supply them, so the
     # result's columns do not depend on which fields the archive happened to hold.
     for name in SIMULTANEOUS_COLUMNS:
@@ -416,11 +426,17 @@ def find_simultaneous(
                 ).total_seconds() / 60.0
                 if overlap < min_overlap_minutes:
                     continue
+                # The unsuffixed `field_name` is the field *the pair* was on,
+                # so it is set only when both sequences agree. With
+                # `same_field=False` they need not, and naming one of the two
+                # would describe the pair by half of it.
+                field_a = getattr(other, "field_name", None)
+                field_b = getattr(sequence, "field_name", None)
                 rows.append(
                     {
                         **{f"{name}_a": getattr(other, name) for name in SIMULTANEOUS_COLUMNS},
                         **{f"{name}_b": getattr(sequence, name) for name in SIMULTANEOUS_COLUMNS},
-                        "field_name": getattr(sequence, "field_name", None),
+                        "field_name": field_a if field_a == field_b else pd.NA,
                         "overlap_minutes": overlap,
                     }
                 )
@@ -431,6 +447,7 @@ def find_simultaneous(
 
 
 def search_observations(
+    *,
     by_name=None,
     coords=None,
     unit_id=None,
@@ -681,8 +698,9 @@ def get_all_observations(
             settings for this call.
 
     Returns:
-        pd.DataFrame: One row per sequence, with `POINTING_RESULT_COLUMNS`
-        added.
+        pd.DataFrame: One row per sequence, with `POINTING_RESULT_COLUMNS` and
+            the values of `FRAME_FACT_COLUMNS` -- ``iso``, ``airmass``,
+            ``moonfrac``, ``moonsep`` -- added.
 
     Raises:
         DocumentsUnavailableError: if no index is configured or none is there.
@@ -728,7 +746,7 @@ def get_metadata(observations: pd.DataFrame, errors: str = "raise") -> pd.DataFr
 
     Returns:
         pd.DataFrame: The frames of every sequence, concatenated. Empty input
-        gives an empty table rather than a `ValueError` from `concat`.
+            gives an empty table rather than a `ValueError` from `concat`.
 
     Raises:
         MetadataUnavailableError: with ``errors='raise'``, if any sequence could

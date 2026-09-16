@@ -284,8 +284,11 @@ def pairs(
         print("[red]No simultaneous observations found.")
         return
 
+    # With `--any-field` the two need not share a field, and the shared
+    # `field_name` is null for those rows, so name both instead.
+    field_cols = ["field_name_a", "field_name_b"] if any_field else ["field_name"]
     display_cols = [
-        "field_name",
+        *field_cols,
         "sequence_sequence_id_a",
         "sequence_sequence_id_b",
         "num_usable_a",

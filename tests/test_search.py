@@ -599,6 +599,13 @@ class TestDuration:
         assert list(results.sequence_sequence_id) == ["PAN001_aaaaaa_20230101T000000"]
 
 
+def test_search_observations_is_keyword_only():
+    """Eighteen parameters is too many to bind by position without a silent
+    mis-bind the first time one is inserted, so a positional call is refused."""
+    with pytest.raises(TypeError, match="positional"):
+        search_observations("M42", None, None, "2023-01-01")
+
+
 class TestAllSkySearch:
     """panoptes/panoptes-data#14: a position was required, so the CLI faked one."""
 
@@ -813,6 +820,48 @@ class TestFindSimultaneous:
 
         assert len(find_simultaneous(table)) == 0
         assert len(find_simultaneous(table, same_field=False)) == 3
+
+    def test_a_sequence_with_no_hardware_id_is_not_different_hardware(self):
+        """Unknown ids must not invent a pair, and must not crash the scan."""
+        both_nan = self.pairs_table(field_name=["M42", "M42", "M42"], camera_id=[np.nan] * 3)
+        assert len(find_simultaneous(both_nan)) == 0
+
+        # `pd.NA` rather than `nan`: comparing it raises where `nan` merely lies.
+        both_na = self.pairs_table(
+            field_name=["M42", "M42", "M42"],
+            camera_id=pd.array([None, None, None], dtype="string"),
+        )
+        assert len(find_simultaneous(both_na)) == 0
+
+        one_known = self.pairs_table(
+            field_name=["M42", "M42", "M42"],
+            camera_id=pd.array(["d37295", None, None], dtype="string"),
+        )
+        assert len(find_simultaneous(one_known)) == 0
+
+    def test_a_cross_field_pair_keeps_both_fields(self):
+        """`field_name` describes the pair, so it is null when they disagree."""
+        table = self.pairs_table(field_name=["M42", "Andromeda", "Triangulum"])
+
+        pairs = find_simultaneous(table, same_field=False)
+        # Three sequences on three fields pair every way, so name the one wanted
+        # rather than indexing on either id, which repeats across pairs.
+        row = pairs[
+            (pairs.sequence_sequence_id_a == "PAN007_d37295_20250407T061910")
+            & (pairs.sequence_sequence_id_b == "PAN007_f6eb3d_20250407T061910")
+        ].iloc[0]
+
+        assert row.field_name_a == "M42"
+        assert row.field_name_b == "Andromeda"
+        assert pd.isna(row.field_name)
+        assert pairs.field_name.isna().all()
+
+    def test_a_same_field_pair_still_names_the_field(self):
+        pairs = find_simultaneous(self.pairs_table())
+
+        assert pairs.field_name.iloc[0] == "M42"
+        assert pairs.field_name_a.iloc[0] == "M42"
+        assert pairs.field_name_b.iloc[0] == "M42"
 
     def test_an_unknown_extent_overlaps_nothing(self):
         table = self.pairs_table(end_time=[None, None, None])

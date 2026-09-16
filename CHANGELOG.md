@@ -4,6 +4,11 @@
 
 ### Changed
 
+- `search_observations` takes keyword arguments only. It has eighteen
+  parameters, and inserting one used to rebind every positional argument after
+  it -- a `source` DataFrame passed positionally would silently arrive as
+  `min_num_usable`. A positional call now raises. [#34][pr-34]
+
 - Metadata is read from the documents `panoptes-pipeline` writes -- an
   `observation.json` per sequence, a `metadata.json` per frame, and the parquet
   index built by walking them -- rather than from a Firestore-derived
@@ -92,7 +97,9 @@
 
 - `find_simultaneous` pairs sequences of one field recorded at the same time by
   different cameras or units, on overlap between `start_time` and `end_time`
-  rather than on a calendar date. [#14][issue-14], [#34][pr-34]
+  rather than on a calendar date. A sequence with no recorded field or no
+  hardware id does not pair: it cannot be shown to match or to differ.
+  [#14][issue-14], [#34][pr-34]
 
 - A `pairs` CLI command over `find_simultaneous`.
 
