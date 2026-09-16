@@ -26,11 +26,8 @@ jobs:
         with:
           # hatch-vcs derives the version from the tag, so it needs the history.
           fetch-depth: 0
-      # `actions/checkout` fetches the commit SHA *into* the tag ref
-      # (`+<sha>:refs/tags/<name>`), so the checkout holds a lightweight tag
-      # whatever the remote has. Re-fetching the ref restores the real tag
-      # object; without this the check below fails every annotated tag, and
-      # `%(contents)` reports the commit message rather than the tag message.
+      # `actions/checkout` fetches the commit SHA into the tag ref, so the
+      # checkout holds a lightweight tag whatever the remote has.
       - name: Restore the annotated tag object
         run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
 
@@ -68,11 +65,8 @@ jobs:
         # The annotated tag message is the release notes, so what the tag says
         # and what the release says cannot drift apart.
         #
-        # This runs whenever there are dists to attach, including when the
-        # publish failed. The release is built from the tag and the build, so a
-        # PyPI-side problem -- a trusted-publisher claim that stops matching,
-        # say -- should not cost the release as well; the two outputs fail
-        # independently because they depend on different things.
+        # Keyed on the build rather than on the job: a release needs the tag and
+        # the dists, not a successful upload.
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
@@ -84,9 +78,8 @@ jobs:
             echo "::error::${GITHUB_REF_NAME} has an empty tag message, and the release notes come from it."
             exit 1
           fi
-          # Fixing a failed publish means re-running this job, so creating the
-          # release has to be repeatable. `gh release create` refuses a tag that
-          # already has one, which would turn the retry into a second failure.
+          # Re-running the job has to be safe: `gh release create` refuses a
+          # tag that already has a release.
           if gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
             gh release edit "${GITHUB_REF_NAME}" \
               --title "${GITHUB_REF_NAME}" \
