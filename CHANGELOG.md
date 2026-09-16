@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The release workflow no longer refuses every annotated tag.
+  `actions/checkout` fetches the commit SHA *into* the tag ref, so the runner
+  held a lightweight tag whatever the remote carried -- which failed the
+  annotated-tag guard and, without it, would have published the commit subject
+  as the release notes. The tag object is re-fetched before the check.
+
 ## 0.5.0 (2026-09-16)
 
 ### Changed

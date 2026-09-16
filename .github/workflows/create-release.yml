@@ -26,6 +26,14 @@ jobs:
         with:
           # hatch-vcs derives the version from the tag, so it needs the history.
           fetch-depth: 0
+      # `actions/checkout` fetches the commit SHA *into* the tag ref
+      # (`+<sha>:refs/tags/<name>`), so the checkout holds a lightweight tag
+      # whatever the remote has. Re-fetching the ref restores the real tag
+      # object; without this the check below fails every annotated tag, and
+      # `%(contents)` reports the commit message rather than the tag message.
+      - name: Restore the annotated tag object
+        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
       # Before anything is built or published: the release notes come from the
       # tag message, and only an annotated tag has one. `%(contents)` on a
       # lightweight tag reports the *commit* message instead, which would
