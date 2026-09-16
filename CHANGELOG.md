@@ -201,6 +201,28 @@
   half, and it fails on a schedule rather than in a user's environment. It can
   also be run on demand.
 
+- The documentation builds from `pyproject.toml`, and `docs/requirements.txt`
+  is gone. That file listed the Sphinx toolchain and then hand-copied the
+  runtime dependencies beside it, so `[project.dependencies]` and the docs
+  build were two lists that had to agree with nothing enforcing it -- and they
+  had already stopped agreeing: it carried `photutils`, which nothing in this
+  package imports. The toolchain is now the `docs` dependency group, and the
+  runtime dependencies come from the project, which `uv sync` installs with
+  the group. It is the same fix as dropping the hatch envs, applied to the one
+  path still on `pip`.
+
+- `.github/workflows/docs.yml` installs with `uv sync --locked --group docs`
+  and builds with `uv run make html`, matching the test workflow.
+  `.readthedocs.yaml` runs the same two commands through `build.commands`, so
+  Read the Docs builds what CI builds rather than resolving its own.
+
+- The docs workflow no longer runs the test suite. Its `test` job was a second
+  copy of the one in `tests.yml` -- same suite, same coverage flags, same
+  `coverage-xml` artifact name, same triggers -- so every push ran the tests
+  twice and a failure reported twice. The docs job no longer needs it, and a
+  docs build that imports the package remains its own check that the package
+  imports.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a

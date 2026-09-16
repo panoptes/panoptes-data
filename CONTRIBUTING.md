@@ -263,7 +263,7 @@ package:
    potentially in the root of your project.
 
 2. Sometimes [tox] misses out when new dependencies are added, especially to
-   `setup.cfg` and `docs/requirements.txt`. If you find any problems with
+   `pyproject.toml`. If you find any problems with
    missing dependencies when running a command with [tox], try to recreate the
    `tox` environment using the `-r` flag. For example, instead of:
 

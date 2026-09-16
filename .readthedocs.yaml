@@ -1,15 +1,24 @@
+# Read the Docs builds the documentation the same way CI does: from
+# `pyproject.toml`, with `uv`. It used to install `docs/requirements.txt`, which
+# hand-copied the runtime dependencies next to the Sphinx toolchain and drifted
+# from `[project.dependencies]`. That file is gone; the toolchain is the `docs`
+# dependency group and the runtime dependencies come from the project itself.
+#
+# `build.commands` replaces Read the Docs' own environment handling, so the
+# `python:` and `sphinx:` keys no longer apply here -- the build is exactly the
+# commands below, and the HTML has to land in `$READTHEDOCS_OUTPUT/html`.
 version: 2
 
 build:
-  os: ubuntu-22.04
+  os: ubuntu-24.04
   tools:
     python: "3.12"
-
-sphinx:
-  configuration: docs/conf.py
-
-python:
-  install:
-    - requirements: docs/requirements.txt
-    - method: pip
-      path: .
+  commands:
+    # `hatch-vcs` reads the version from the git tag, and Read the Docs clones
+    # shallowly. Without this the build has no tag to read.
+    - git fetch --tags --unshallow || git fetch --tags
+    - python -m pip install --upgrade uv
+    # `--locked` fails rather than re-resolving: Read the Docs builds what
+    # `uv.lock` describes, which is what CI tested.
+    - uv sync --locked --group docs
+    - uv run sphinx-build -b html docs $READTHEDOCS_OUTPUT/html
