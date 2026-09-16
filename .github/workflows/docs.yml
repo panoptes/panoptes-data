@@ -5,6 +5,10 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  # Publishing is otherwise only a side effect of pushing. A deploy you can
+  # trigger on demand is what you want when the site needs republishing and
+  # `main` has not moved -- after switching the Pages source, for instance.
+  workflow_dispatch:
 
 # Publishing goes through the Pages deployment API rather than a commit to a
 # branch, so the job needs an OIDC token to identify itself and no write access
@@ -63,7 +67,9 @@ jobs:
   deploy-docs:
     name: Publish to GitHub Pages
     needs: build-docs
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.ref == 'refs/heads/main'
+      && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
