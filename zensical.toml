@@ -6,7 +6,9 @@ site_description = "Tools for working with PANOPTES data."
 site_url = "https://panoptes.github.io/panoptes-data/"
 repo_url = "https://github.com/panoptes/panoptes-data"
 repo_name = "panoptes/panoptes-data"
-edit_uri = "edit/main/docs/"
+# No `edit_uri`: nearly every page is a wrapper including a file from the
+# repository root, so an edit link would open the one-line wrapper rather
+# than the `README.md` or `CHANGELOG.md` the reader is actually looking at.
 
 nav = [
   { "Home" = "index.md" },
@@ -66,8 +68,11 @@ pymdownx.snippets.check_paths = true
 
 # Docstrings are the API reference: `::: panoptes.data.search` in a Markdown
 # file is the whole page. There is no generated intermediate to commit.
-# `panoptes/data/utils` and `.../cli` carry no `__init__.py`, so griffe --
-# which reads the source rather than importing it -- needs `paths` spelled out.
+# `paths` points griffe at the working tree, so the reference describes this
+# checkout rather than whatever copy of the package happens to be installed.
+# It was originally load-bearing for a different reason -- `panoptes/data/utils`
+# and `.../cli` had no `__init__.py`, which a static reader cannot follow -- and
+# those now exist, so this is belt and braces rather than a workaround.
 "zensical.extensions.mkdocstrings".handlers.python.paths = ["src"]
 "zensical.extensions.mkdocstrings".handlers.python.options.docstring_style = "google"
 "zensical.extensions.mkdocstrings".handlers.python.options.show_root_heading = true
