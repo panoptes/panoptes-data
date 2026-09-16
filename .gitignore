@@ -43,6 +43,8 @@ build/*
 dist/*
 sdist/*
 site/
+# `zensical build` writes an incremental cache beside the config.
+.cache/
 cover/*
 MANIFEST
 
