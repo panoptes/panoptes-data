@@ -6,7 +6,12 @@ from conftest import SEQUENCE_ID, build_index, frame_document, write_sequence
 
 from panoptes.data import documents
 from panoptes.data import search as search_mod
-from panoptes.data.search import add_pointing, get_all_observations, search_observations
+from panoptes.data.search import (
+    MetadataUnavailableError,
+    add_pointing,
+    get_all_observations,
+    search_observations,
+)
 
 
 def observations_table(**overrides):
@@ -423,6 +428,72 @@ def test_usable_query_agrees_with_num_usable(tmp_path, monkeypatch):
     filtered = ObservationInfo(sequence_id=SEQUENCE_ID, image_query=USABLE_QUERY)
 
     assert len(filtered.image_metadata) == num_usable == 2
+
+
+class TestGetMetadata:
+    """panoptes/panoptes-data#13: `except Exception: pass` over the whole loop."""
+
+    def failing_reader(self, monkeypatch, fail_on):
+        class FakeObsInfo:
+            def __init__(self, meta=None):
+                name = meta["sequence_sequence_id"]
+                if name in fail_on:
+                    raise RuntimeError(f"no documents for {name}")
+                self.image_metadata = pd.DataFrame({"a": [1]})
+
+        monkeypatch.setattr(search_mod, "ObservationInfo", FakeObsInfo)
+
+    def observations(self):
+        return pd.DataFrame({"sequence_sequence_id": ["S1", "S2", "S3"]})
+
+    def test_a_failure_is_raised_rather_than_passed_over(self, monkeypatch):
+        self.failing_reader(monkeypatch, {"S2"})
+
+        with pytest.raises(MetadataUnavailableError, match="1 of 3"):
+            search_mod.get_metadata(self.observations())
+
+    def test_every_sequence_failing_is_not_an_empty_table(self, monkeypatch):
+        """The defect exactly: a total failure read as an archive with nothing in it."""
+        self.failing_reader(monkeypatch, {"S1", "S2", "S3"})
+
+        with pytest.raises(MetadataUnavailableError) as excinfo:
+            search_mod.get_metadata(self.observations())
+
+        assert len(excinfo.value.partial) == 0
+        assert set(excinfo.value.failures) == {"S1", "S2", "S3"}
+
+    def test_the_exception_carries_the_failures_and_what_did_read(self, monkeypatch):
+        self.failing_reader(monkeypatch, {"S2"})
+
+        with pytest.raises(MetadataUnavailableError) as excinfo:
+            search_mod.get_metadata(self.observations())
+
+        assert list(excinfo.value.failures) == ["S2"]
+        assert isinstance(excinfo.value.failures["S2"], RuntimeError)
+        assert len(excinfo.value.partial) == 2
+
+    def test_warn_returns_the_partial_table(self, monkeypatch, caplog):
+        self.failing_reader(monkeypatch, {"S2"})
+
+        with caplog.at_level("WARNING"):
+            result = search_mod.get_metadata(self.observations(), errors="warn")
+
+        assert len(result) == 2
+        assert "1 of 3" in caplog.text
+
+    def test_no_failures_is_just_the_table(self, monkeypatch):
+        self.failing_reader(monkeypatch, set())
+
+        assert len(search_mod.get_metadata(self.observations())) == 3
+
+    def test_nothing_to_read_is_an_empty_table_not_a_concat_error(self, monkeypatch):
+        self.failing_reader(monkeypatch, set())
+
+        assert len(search_mod.get_metadata(pd.DataFrame({"sequence_sequence_id": []}))) == 0
+
+    def test_an_unknown_errors_mode_is_refused(self):
+        with pytest.raises(ValueError, match="'raise' or 'warn'"):
+            search_mod.get_metadata(pd.DataFrame(), errors="ignore")
 
 
 def test_get_metadata_concatenates(monkeypatch):

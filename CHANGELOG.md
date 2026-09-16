@@ -120,6 +120,20 @@
 
 ### Fixed
 
+- `get_metadata` no longer swallows every failure. It wrapped the whole
+  per-sequence loop in `except Exception: pass`, so a run in which half the
+  sequences failed returned half the archive with nothing to say it was half,
+  and a run in which *all* of them failed either returned an empty table or
+  died in `concat` on an empty list -- neither distinguishable from an archive
+  with nothing in it. It now raises `MetadataUnavailableError` by default,
+  carrying both the per-sequence failures and the partial table, so a caller
+  who wants an incomplete result chooses one instead of being handed one;
+  `errors='warn'` is that choice. Empty input returns an empty table.
+  [#13][issue-13]
+
+  This is the rule the rest of the package already followed: partial data
+  raises, it never silently shortens.
+
 - `read_frames` applies the contract's dropped blocks and reindexes to its
   required columns, so reading documents directly and reading `frames.parquet`
   produce the same column names. Without the first, `image.params` -- a whole
@@ -156,6 +170,7 @@
 
 [issue-12]: https://github.com/panoptes/panoptes-data/issues/12
 [issue-13]: https://github.com/panoptes/panoptes-data/issues/13
+[issue-14]: https://github.com/panoptes/panoptes-data/issues/14
 [issue-15]: https://github.com/panoptes/panoptes-data/issues/15
 [contract]: https://github.com/panoptes/panoptes-pipeline/blob/main/plans/data-contract.md
 

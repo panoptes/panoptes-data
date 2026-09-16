@@ -10,10 +10,27 @@ from panoptes.utils.time import current_time
 from panoptes.utils.utils import listify
 
 from panoptes.data import documents
-from panoptes.data.observations import ObservationInfo
+from panoptes.data.observations import ObservationInfo, sequence_id_of
 from panoptes.data.settings import SurveySettings
 
 logger = logging.getLogger()
+
+
+class MetadataUnavailableError(RuntimeError):
+    """Some sequences' metadata could not be read, so the table is incomplete.
+
+    Carries what it knows rather than only that it failed: `failures` maps each
+    sequence id to the exception it raised, and `partial` is the table of the
+    sequences that did read. A caller who genuinely wants an incomplete result
+    takes it from here, which is the difference between choosing a partial
+    answer and being handed one.
+    """
+
+    def __init__(self, message: str, failures: dict, partial):
+        super().__init__(message)
+        self.failures = failures
+        self.partial = partial
+
 
 # The frames-index columns a sequence's pointing is derived from. Read on their
 # own, so asking four columns of `frames.parquet` does not pay for the fifty
@@ -281,20 +298,63 @@ def get_all_observations(
     return add_pointing(obs_df, frames)
 
 
-def get_metadata(observations: pd.DataFrame) -> pd.DataFrame:
-    """Get the metadata for a set of observations.
+def get_metadata(observations: pd.DataFrame, errors: str = "raise") -> pd.DataFrame:
+    """Read the per-frame documents of many sequences into one table.
+
+    This used to wrap the read in ``except Exception: pass``, so a run in which
+    every sequence failed returned the same empty table as a run with nothing to
+    read, and a run in which half failed returned half the archive with no sign
+    that it was half (panoptes/panoptes-data#13). Failing is now the default,
+    and a caller who wants what did read has to say so -- which is the same rule
+    the rest of the package follows: partial data raises, it never silently
+    shortens.
 
     Args:
-        observations (pd.DataFrame): A DataFrame of observations.
+        observations: Rows carrying a sequence id, as `search_observations`
+            returns them.
+        errors: ``'raise'`` (default) to refuse a partial result, or
+            ``'warn'`` to log which sequences failed and return the rest. A
+            `MetadataUnavailableError` carries both the failures and the partial
+            table, so ``'raise'`` loses nothing that ``'warn'`` would have kept.
 
     Returns:
-        pd.DataFrame: A DataFrame of metadata for the observations.
+        pd.DataFrame: The frames of every sequence, concatenated. Empty input
+        gives an empty table rather than a `ValueError` from `concat`.
+
+    Raises:
+        MetadataUnavailableError: with ``errors='raise'``, if any sequence could
+            not be read.
+        ValueError: if `errors` is neither ``'raise'`` nor ``'warn'``.
     """
-    dfs = list()
+    if errors not in ("raise", "warn"):
+        raise ValueError(f"`errors` is 'raise' or 'warn', not {errors!r}.")
+
+    dfs = []
+    failures: dict[str, Exception] = {}
     for idx, rec in observations.iterrows():
+        # The id is read for the error message, not for the lookup: a record
+        # `ObservationInfo` can use but this cannot name is still worth trying.
+        try:
+            name = sequence_id_of(rec)
+        except ValueError:
+            name = str(idx)
+
         try:
             dfs.append(ObservationInfo(meta=rec).image_metadata)
-        except Exception:
-            pass
+        except Exception as e:  # noqa: BLE001 -- recorded and re-raised below.
+            failures[name] = e
 
-    return pd.concat(dfs)
+    partial = pd.concat(dfs) if dfs else pd.DataFrame()
+
+    if failures:
+        summary = ", ".join(f"{name} ({e!r})" for name, e in list(failures.items())[:5])
+        message = (
+            f"{len(failures)} of {len(observations)} sequence(s) could not be read, so "
+            f"this table holds {len(partial)} frame(s) from {len(dfs)} sequence(s) "
+            f"rather than all of them. First failures: {summary}"
+        )
+        if errors == "raise":
+            raise MetadataUnavailableError(message, failures=failures, partial=partial)
+        logger.warning(message)
+
+    return partial

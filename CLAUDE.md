@@ -177,6 +177,11 @@ not from any URL field.
   naming where a frame lives is useful even when nothing will serve it.
 - Parquet over CSV is load-bearing: dtypes live in the file, so a serial like
   `032071000633` comes back a string instead of `3.207100e+10` (panoptes/panoptes-data#13).
+- **`get_metadata` raises on a partial read.** It used to wrap the whole loop in
+  `except Exception: pass`, so half the archive and all of it were the same
+  return value. `MetadataUnavailableError` carries the failures *and* the rows
+  that did read, so `errors='warn'` is a choice a caller makes rather than a
+  default they are handed. Same rule as `read_frames` and `get_image_list`.
 
 ## Tests
 
