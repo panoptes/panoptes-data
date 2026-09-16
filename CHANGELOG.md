@@ -317,6 +317,17 @@
   Agent sessions tend to default to drafts, and a draft asks a reviewer to
   guess whether the work is finished.
 
+- `.gitattributes` marks `CHANGELOG.md` as `merge=union`, so two branches
+  adding entries under `## Unreleased` merge without stopping. Every pull
+  request in the last batch conflicted here and every resolution was the same
+  -- keep both sides -- which is what git's built-in union driver does. Squash
+  merges are what make it routine: the merged commit shares no ancestry with
+  the branch that produced it, so git sees two unrelated edits to one line.
+
+  Union never reports a conflict, so the merged bullets can land in either
+  order and the blank line between them can be dropped. Read the section after
+  a merge; content cannot be lost, but its shape can need a tidy.
+
 - Coverage is configured in `pyproject.toml` under `[tool.coverage]`, and
   `.coveragerc` is gone. The settings were doing real work -- `branch` is why
   the report carries branch counts, and `source` is why a bare `pytest --cov`
