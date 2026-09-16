@@ -6,14 +6,23 @@ on:
   pull_request:
     branches: [ main ]
 
-# Required permissions for deploying to GitHub Pages
+# Publishing goes through the Pages deployment API rather than a commit to a
+# branch, so the job needs an OIDC token to identify itself and no write access
+# to the repository at all.
 permissions:
-  contents: write
+  contents: read
   pages: write
+  id-token: write
+
+# A queued deploy should publish the newest `main`, not wait its turn behind an
+# older one; in-progress deployments are left to finish rather than cancelled.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build-docs:
-    name: Build and publish docs
+    name: Build docs
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -44,16 +53,22 @@ jobs:
       - name: Build docs
         run: uv run --group docs zensical build --clean --strict
 
-      - name: Upload HTML docs artifact
-        uses: actions/upload-artifact@v4
+      # Uploaded on pull requests too, so a reviewer can download the built
+      # site; only the deploy job below is gated on `main`.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
         with:
-          name: docs-html
           path: site
 
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: site
-          publish_branch: gh-pages
+  deploy-docs:
+    name: Publish to GitHub Pages
+    needs: build-docs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

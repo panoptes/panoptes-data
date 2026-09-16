@@ -68,9 +68,11 @@ write prose into `docs/`** — it belongs in a docstring or in a root Markdown
 file, or it becomes the next thing to keep in step by hand. The one exception
 is `docs/building.md`, which is about the site itself.
 
-Docs publish to GitHub Pages only. Read the Docs is gone: it was a second
-build, from a second config, of the same site the `gh-pages` deploy was already
-publishing.
+Docs publish to GitHub Pages only, through the Pages deployment API —
+`upload-pages-artifact` then `deploy-pages`, with the repository's Pages source
+set to **GitHub Actions**. There is no `gh-pages` branch in the loop and the
+workflow needs no write access to the repository. Read the Docs is gone: it was
+a second build, from a second config, of the same site.
 
 ### Linting
 

@@ -256,6 +256,19 @@
 
 [Zensical]: https://zensical.org/
 
+- Documentation publishes through the GitHub Pages deployment API --
+  `upload-pages-artifact` then `deploy-pages` -- rather than by committing the
+  built site to a `gh-pages` branch. The workflow no longer needs
+  `contents: write`: it identifies itself with a short-lived OIDC token and
+  holds no write access to the repository, which is the same reasoning as the
+  release workflow's Trusted Publishing. The built site is also uploaded on
+  pull requests, so a reviewer can download it without waiting for a merge.
+
+  This needs the repository's Pages source set to **GitHub Actions** (Settings
+  -> Pages -> Build and deployment -> Source). Until that is switched, the
+  deploy step fails; it is a repository setting, not something the workflow can
+  do for itself.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a
