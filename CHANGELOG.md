@@ -275,6 +275,24 @@
   deploy step fails; it is a repository setting, not something the workflow can
   do for itself.
 
+- Docstrings parse cleanly. `griffe` -- which is what `mkdocstrings` reads --
+  had twelve complaints, and each was a real ambiguity rather than a style
+  preference. Five parameters and two return values had neither a type in the
+  signature nor one in the docstring, so the rendered reference showed no type
+  at all: `ObservationInfo.__init__`'s `sequence_id`, `meta` and `image_query`,
+  `get_metadata`'s `query` and `get_all_observations`' `index_root`, plus the
+  returns of `public_urls` and `get_image_list`. `get_metadata` gained a return
+  annotation too, though it documents no return and `griffe` had not asked.
+
+  Two `Returns:` blocks were being read as *two* return values each, because a
+  continuation line sat at the same indentation as the line it continued.
+  `get_image_list`'s `Args:` names carried a stray leading space, which moved
+  the indentation its continuation lines were measured against.
+
+  `get_all_observations(settings: SurveySettings = None)` also said its
+  `settings` argument was non-optional while defaulting it to `None`; it is
+  `SurveySettings | None` now.
+
 - `CONTRIBUTING.md` describes this repository. It had been PyScaffold's
   generated template, largely unedited: every workflow it documented ran
   through `tox`, which this repository has never configured; it pointed
