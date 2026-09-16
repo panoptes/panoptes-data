@@ -263,6 +263,9 @@
   holds no write access to the repository, which is the same reasoning as the
   release workflow's Trusted Publishing. The built site is also uploaded on
   pull requests, so a reviewer can download it without waiting for a merge.
+  The Pages permissions are scoped to the deploy job alone: the build job runs
+  a pull request's own code -- `mkdocstrings` imports the package to read its
+  docstrings -- and has no business being able to mint an OIDC token.
 
   This needs the repository's Pages source set to **GitHub Actions** (Settings
   -> Pages -> Build and deployment -> Source). Until that is switched, the

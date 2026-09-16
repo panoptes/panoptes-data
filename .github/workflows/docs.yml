@@ -10,24 +10,18 @@ on:
   # `main` has not moved -- after switching the Pages source, for instance.
   workflow_dispatch:
 
-# Publishing goes through the Pages deployment API rather than a commit to a
-# branch, so the job needs an OIDC token to identify itself and no write access
-# to the repository at all.
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# A queued deploy should publish the newest `main`, not wait its turn behind an
-# older one; in-progress deployments are left to finish rather than cancelled.
-concurrency:
-  group: pages
-  cancel-in-progress: false
+# Permissions are per job, not workflow-wide. `build-docs` runs on pull
+# requests and executes the branch's own code -- `mkdocstrings` imports the
+# package to read its docstrings -- so it gets nothing beyond reading the
+# checkout. Only `deploy-docs`, which runs from `main` and builds nothing, can
+# mint an OIDC token or call the Pages API.
 
 jobs:
   build-docs:
     name: Build docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         python-version: [3.12]
@@ -71,6 +65,16 @@ jobs:
       github.ref == 'refs/heads/main'
       && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Scoped to the deploy, so a slow pull-request build never queues behind or
+    # ahead of a publication. A queued deploy should publish the newest `main`
+    # rather than wait its turn; one already in flight is left to finish.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
