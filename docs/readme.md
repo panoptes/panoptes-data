@@ -8,16 +8,18 @@
 Everything goes through `uv`, as it does everywhere else in this repository.
 The Sphinx toolchain is the `docs` dependency group in `pyproject.toml`, and
 `uv sync` installs the project alongside it, so autodoc imports the real
-`astropy`, `pandas` and `typer` rather than working from stubs.
+`astropy` and `pandas` rather than working from stubs. (`pydantic`,
+`pydantic_settings`, `tqdm` and `typer` stay mocked through
+`autodoc_mock_imports` in `docs/conf.py`, installed or not.)
 
 ```bash
 uv sync --group docs
 cd docs
-uv run make html
+uv run --group docs make html
 open _build/html/index.html
 ```
 
-Or, without the `Makefile`:
+Or, without the `Makefile`, from the repository root:
 
 ```bash
 uv run --group docs sphinx-build -b html docs docs/_build/html

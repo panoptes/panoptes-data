@@ -21,4 +21,4 @@ build:
     # `--locked` fails rather than re-resolving: Read the Docs builds what
     # `uv.lock` describes, which is what CI tested.
     - uv sync --locked --group docs
-    - uv run sphinx-build -b html docs $READTHEDOCS_OUTPUT/html
+    - uv run --group docs sphinx-build -b html docs $READTHEDOCS_OUTPUT/html
