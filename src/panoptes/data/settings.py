@@ -26,10 +26,9 @@ class SurveySettings(BaseSettings):
         The parquet index built by walking the processed tree, which defaults
         to sitting in it. `search_observations` reads that index.
 
-    The URL fields describe the cloud archive as it was laid out. Nothing
-    serves those objects anonymously any more
-    (`ObservationInfo.download_images`), so they name where a frame lives
-    rather than somewhere to fetch it from.
+    The URL fields describe the cloud archive's layout. Nothing serves those
+    objects anonymously (`ObservationInfo.download_images`), so they name where
+    a frame lives rather than somewhere to fetch it from.
 
     A ``.env`` file in the working directory is read as well, so the roots can
     be checked out beside a project rather than exported in every shell. A real
