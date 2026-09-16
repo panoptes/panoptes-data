@@ -203,10 +203,12 @@
 
 - Docstrings parse cleanly. `griffe` -- which is what `mkdocstrings` reads --
   had twelve complaints, and each was a real ambiguity rather than a style
-  preference. Six parameters and three return values had neither a type in the
+  preference. Five parameters and two return values had neither a type in the
   signature nor one in the docstring, so the rendered reference showed no type
   at all: `ObservationInfo.__init__`'s `sequence_id`, `meta` and `image_query`,
-  `get_metadata`'s `query`, and `get_all_observations`' `index_root`.
+  `get_metadata`'s `query` and `get_all_observations`' `index_root`, plus the
+  returns of `public_urls` and `get_image_list`. `get_metadata` gained a return
+  annotation too, though it documents no return and `griffe` had not asked.
 
   Two `Returns:` blocks were being read as *two* return values each, because a
   continuation line sat at the same indentation as the line it continued.
