@@ -43,8 +43,8 @@ SEQUENCE_ID_FIELDS = ("sequence_sequence_id", "sequence_id")
 
 IMAGES_UNAVAILABLE_MESSAGE = (
     "Archived frames cannot be downloaded. Every URL the metadata carries "
-    "points into a Google Cloud Storage bucket that no longer serves the "
-    "object anonymously, in every era of the archive, and there is no public "
+    "points into a Google Cloud Storage bucket that does not serve the "
+    "object anonymously, in any era of the archive, and there is no public "
     "replacement -- see panoptes/panoptes-data#17. Frames are read from a "
     "local copy of the archive instead: set PANOPTES_ARCHIVE_ROOT to the "
     "directory holding the unit folders and `get_image_list` resolves the "
@@ -100,9 +100,7 @@ class ObservationInfo:
 
         The metadata comes from the documents `panoptes-pipeline` wrote: the
         sequence's ``observation.json`` and one ``metadata.json`` per frame,
-        under ``PANOPTES_PROCESSED_ROOT``. It used to come from a Firestore
-        summary and a cloud function, both downstream of a pipeline that stopped
-        producing them; see panoptes/panoptes-data#15.
+        under ``PANOPTES_PROCESSED_ROOT`` (panoptes/panoptes-data#15).
 
         Where the *frames* resolve to is a separate question with a separate
         setting -- see `get_image_list`. Raw-frame discovery is genuinely
@@ -158,9 +156,8 @@ class ObservationInfo:
         self.observation = documents.read_observation(
             self._processed_root, self.sequence_id, contract=self._contract
         )
-        # `meta` used to be empty whenever the class was built from a sequence
-        # id alone, which made "construct from an id" the second-class way of
-        # using it. The observation document is the metadata, so now it is not.
+        # The observation document *is* the metadata, so building from a
+        # sequence id is not the lesser way in: `meta` is populated either way.
         self.meta = meta if meta is not None else self.observation
 
         self.image_metadata = self.get_metadata(query=image_query)
@@ -186,9 +183,7 @@ class ObservationInfo:
         """The browsable URLs carried by the metadata, if any.
 
         Under the contract these are decorations added by whatever uploads the
-        products, not part of the document the pipeline writes -- which is what
-        the old cloud orchestrator already treated them as, injecting
-        ``fits_public_url`` and ``assets`` *after* processing. So a document
+        products, not part of the document the pipeline writes. So a document
         with no URL field at all is the normal case, not the broken one, and
         the raw frame locations come from `get_image_list` regardless.
 
@@ -208,7 +203,7 @@ class ObservationInfo:
 
         This reads whatever is in `image_list`. With an archive root
         configured those are local files and this works; without one they are
-        archive URLs that no longer serve anonymously (`download_images`) and
+        archive URLs that nothing serves anonymously (`download_images`) and
         the read fails. See `get_image_list`.
         """
         data_img = self.image_list[idx]
@@ -384,15 +379,11 @@ class ObservationInfo:
     ):
         """Deprecated: archived frames are not currently available for download.
 
-        The URLs this class builds are still the right archive locations, and
-        `get_image_list` still returns them, but nothing serves them: they 404
-        for an anonymous caller in both the 2018 and the 2025 layout. This
-        method used to construct those URLs, fail on every one of them, and --
-        with the default ``warn_on_error`` -- return an empty list as though
-        the observation simply had no images.
-
-        It now raises instead, so a caller learns that no frame was fetched at
-        the point where the fetch was attempted.
+        The URLs this class builds are the right archive locations, and
+        `get_image_list` returns them, but nothing serves them: they 404 for an
+        anonymous caller in both the 2018 and the 2025 layout. Raising is what
+        tells a caller no frame was fetched, at the point the fetch was
+        attempted, rather than handing back an empty list.
 
         Raises:
             ImagesUnavailableError: always.

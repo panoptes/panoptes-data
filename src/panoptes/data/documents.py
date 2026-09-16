@@ -13,25 +13,23 @@ products, in a tree that mirrors the raw archive layout::
 Those files are the source of truth. Walking them produces ``frames.parquet``
 (one row per frame) and ``observations.parquet`` (one row per sequence, grouped
 from the frames), with ``schema.json`` recording the column contract. That is
-the query surface, and it is what replaced the Firestore-derived
-``observations.csv`` this package used to read.
+the query surface this package reads.
 
 Why this module exists rather than a few `json.loads` calls
 -----------------------------------------------------------
-panoptes/panoptes-data#12 and #13 were the same defect twice: a vocabulary
-shared across a repository boundary with nothing declaring it, so the reader
-guessed a field name and the guess went stale. The names here come from
-`data contract`_ section 3 and are read back from ``schema.json`` where the
-producer wrote it down, rather than being inferred from what happened to be in
-a record.
+A vocabulary shared across a repository boundary with nothing declaring it
+leaves the reader guessing a field name, and the guess goes stale
+(panoptes/panoptes-data#12, #13). The names here come from `data contract`_
+section 3 and are read back from ``schema.json`` where the producer wrote them
+down, rather than being inferred from what happened to be in a record.
 
 The flattening in particular is a contract, not a convenience. A document is a
 nested map -- ``{"image": {"camera": {"exptime": 120.0}}}`` -- and a DataFrame
 column is a flat name, so the two are joined by a separator. That separator is
 ``_`` and never ``.``: contract 3.2 calls a dotted name a *view* over a nested
-map rather than storage, and the dotted ``camera.serial_number`` in the old
-``observations.csv`` is exactly the confusion between "document path" and
-"column" being avoided. `read_schema` reads the producer's declared separator
+map rather than storage, and a dotted ``camera.serial_number`` is exactly the
+confusion between "document path" and "column" being avoided. `read_schema`
+reads the producer's declared separator
 so a change there is visible here instead of silently renaming every column.
 
 .. _data contract:
@@ -104,9 +102,8 @@ NO_ROOT_MESSAGE = (
     "PANOPTES_PROCESSED_ROOT to the root of a tree written by "
     "panoptes-pipeline -- the directory holding the unit folders, so that "
     "<root>/PAN012/358d0f/20180824T035917/observation.json is a sequence "
-    "document. This package no longer reads the Firestore-derived "
-    "observations.csv or the get-observation-info cloud function; both were "
-    "downstream of a pipeline that stopped producing them."
+    "document. The processed tree is the only source of metadata; there is no "
+    "cloud source to fall back to."
 )
 
 

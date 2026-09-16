@@ -195,8 +195,8 @@ def wrap_degrees(angle):
     """Signed separation in degrees, folded onto ``(-180, 180]``.
 
     A mount at 359.9 degrees and a target at 0.1 are 0.2 degrees apart, not
-    359.8. The old CSV-era search compared raw degrees, so every cone spanning
-    0h RA silently returned nothing.
+    359.8. Comparing raw degrees makes every cone spanning 0h RA silently
+    return nothing.
     """
     return (np.asarray(angle, dtype=float) + 180.0) % 360.0 - 180.0
 
@@ -478,7 +478,7 @@ def search_observations(
 
     The columns are the ones `panoptes-pipeline` declares -- ``num_frames``,
     ``num_usable``, ``duration_minutes``, ``sequence_sequence_id`` -- rather
-    than the Firestore summary's, because the summary is not produced any more.
+    than the Firestore summary's, which nothing produces.
     See `panoptes.data.documents`.
 
     **A position is optional.** With no `coords`, `by_name`, or `ra`/`dec`, the
@@ -607,8 +607,7 @@ def search_observations(
         start_date = as_utc(start_date if start_date is not None else f"{dt.today().year}-01-01")
         end_date = as_utc(end_date if end_date is not None else current_time())
 
-    # Never mutate the caller's table: the previous version ran
-    # `query(..., inplace=True)` on whatever `source` was handed in.
+    # Never mutate the caller's table.
     obs_df = source.copy() if source is not None else get_all_observations()
     print(f"Searching {len(obs_df)} observations")
 
@@ -661,8 +660,7 @@ def search_observations(
     obs_df = obs_df.sort_values(by=["sequence_time"])
 
     # Mean exposure per frame. `total_exptime` is summed over the frame
-    # documents rather than read from a column only the index held, which is
-    # why it is no longer null for exactly the long sequences anyone wants.
+    # documents, so it is populated even for the long sequences.
     obs_df["exptime"] = obs_df.total_exptime / obs_df.num_frames
 
     if query:
@@ -689,15 +687,13 @@ def get_all_observations(
     """Every sequence in the index, with its pointing attached.
 
     Reads ``observations.parquet``, the query surface `panoptes-pipeline`
-    builds by walking the documents it wrote. That replaced the
-    Firestore-generated ``observations.csv``, which nothing produces any more.
+    builds by walking the documents it wrote.
 
-    Two things come for free with parquet that the CSV could not give. Dtypes
-    are in the file, so ``camera_serial_number`` comes back as the string
-    ``032071000633`` instead of being inferred into ``3.207100e+10``
-    (panoptes/panoptes-data#13). And ``total_exptime`` is a sum over per-frame
-    records rather than a number the index alone held, so it is populated for
-    the long sequences where the CSV had null and nowhere to recover it from.
+    Two things come for free with parquet. Dtypes are in the file, so
+    ``camera_serial_number`` comes back as the string ``032071000633`` rather
+    than being inferred into ``3.207100e+10`` (panoptes/panoptes-data#13). And
+    ``total_exptime`` is a sum over per-frame records, so it is populated for
+    the long sequences.
 
     Args:
         settings: The settings to use. Defaults to reading the environment.

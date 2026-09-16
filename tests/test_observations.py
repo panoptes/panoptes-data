@@ -56,7 +56,7 @@ class TestConstruction:
         assert len(obs_info.image_list) == 2
 
     def test_a_sequence_id_alone_now_has_metadata(self, processed_root):
-        """It used to be an empty dict, which made "from an id" the lesser way in."""
+        """Building from an id is not the lesser way in: `meta` is populated too."""
         obs_info = obs_mod.ObservationInfo(sequence_id=SEQUENCE_ID)
 
         assert obs_info.meta["num_frames"] == 2
@@ -133,7 +133,7 @@ class TestMetadata:
         assert len(obs_info.image_list) == 1
 
     def test_usable_query_keeps_only_the_frames_the_pipeline_matched(self, tmp_path, monkeypatch):
-        """The per-frame filter the old observation-level `status` never was."""
+        """Filtering is per frame, which an observation-level status cannot do."""
         root = tmp_path / "processed"
         write_sequence(
             root,
@@ -388,7 +388,7 @@ class TestDownloadImages:
             obs_info.download_images(output_dir="unused", show_progress=False)
 
     def test_raises_even_when_warn_on_error(self, processed_root):
-        """`warn_on_error` used to turn every failed fetch into an empty result."""
+        """A failed fetch must not read as an observation with no images."""
         obs_info = obs_mod.ObservationInfo(sequence_id=SEQUENCE_ID)
 
         with pytest.warns(DeprecationWarning), pytest.raises(obs_mod.ImagesUnavailableError):

@@ -204,7 +204,7 @@ class TestSearchObservations:
         assert (results.exptime == results.total_exptime / results.num_frames).all()
 
     def test_the_source_table_is_not_mutated(self):
-        """`query(..., inplace=True)` used to rewrite the caller's DataFrame."""
+        """A search must never rewrite the caller's DataFrame."""
         source = observations_table()
 
         search_observations(
