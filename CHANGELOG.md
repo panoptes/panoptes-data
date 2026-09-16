@@ -330,6 +330,17 @@
 
 ### Release tooling
 
+- The release workflow refuses a tag it cannot take release notes from. The
+  notes are the tag message, and only an annotated tag has one: `%(contents)`
+  on a lightweight tag reports the *commit* message instead, so a hurried
+  `git tag v0.5.0` would have published a commit subject as the release notes
+  -- wrong, and plausible enough to go unnoticed. An annotated tag with an
+  empty message is refused too. Both checks run before anything is built, so a
+  bad tag costs nothing rather than leaving a version on PyPI with no release
+  to go with it. See [#18][issue-18].
+
+[issue-18]: https://github.com/panoptes/panoptes-data/issues/18
+
 - Releases are published to PyPI with Trusted Publishing rather than a
   long-lived API token, so they now carry build attestations that anyone can
   verify. The publish action produces those by default, but an explicit
