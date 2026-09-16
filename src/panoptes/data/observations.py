@@ -7,7 +7,7 @@ from astropy.nddata import CCDData, Cutout2D
 from astropy.wcs import FITSFixedWarning
 
 from panoptes.data import documents
-from panoptes.data.settings import SurveySettings
+from panoptes.data.settings import ImageStatus, SurveySettings
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.images.fits import ImagePathInfo
 
@@ -17,6 +17,23 @@ warnings.filterwarnings('ignore', category=FITSFixedWarning)
 # contract rather than guessed at. Everything else, including every URL field,
 # is optional -- see `ObservationInfo.public_urls`.
 REQUIRED_FRAME_FIELDS = ('image_uid', 'image_image_time')
+
+#: An `image_query` keeping only the frames the pipeline processed cleanly.
+#:
+#: The predicate is equality on ``MATCHED`` because that is exactly how the
+#: index computes ``num_usable``, so a sequence filtered with this has as many
+#: frames as the index said were usable -- the two cannot drift into disagreeing
+#: about what "usable" counts.
+#:
+#: It is named here rather than spelled out at each call site because the
+#: definition is upstream's to move. `ImageStatus` is an `IntEnum` whose *order*
+#: is load-bearing in the pipeline -- its idempotency rule is "at or past
+#: ``PROCESSING``" -- and ``EXTRACTING``/``EXTRACTED`` sort **above**
+#: ``MATCHED``. Today the pipeline writes only ``MATCHED`` or ``ERROR``, so
+#: equality and "at or past" select the same frames; if that changes, this is
+#: the one line to change, and `test_usable_query_agrees_with_num_usable` is
+#: what notices.
+USABLE_QUERY = f'image_status == "{ImageStatus.MATCHED.name}"'
 
 # Where a sequence id is found on a metadata record. The observation index
 # groups on `sequence_sequence_id`, so that is what a row of search results
@@ -103,9 +120,12 @@ class ObservationInfo:
                 `search_observations` results. Supplying it saves nothing --
                 the observation document is read either way -- but it keeps the
                 search result and the observation together.
-            image_query: A query string to use when querying for images, e.g.
-                'image_status != "ERROR"'. The field names are the contract's,
-                so this is `image_status` and not `status`.
+            image_query: A query string to use when querying for images. The
+                field names are the contract's, so this is `image_status` and
+                not `status`. Pass `USABLE_QUERY` for only the frames the
+                pipeline processed cleanly. It is empty by default: defaulting
+                to usable-only would silently hide failed frames, which reads
+                as an observation that never had them.
             processed_root: The tree of pipeline documents, overriding the
                 ``processed_root`` setting for this instance.
         """

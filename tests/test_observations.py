@@ -131,6 +131,39 @@ class TestMetadata:
         assert len(obs_info.image_metadata) == 1
         assert len(obs_info.image_list) == 1
 
+    def test_usable_query_keeps_only_the_frames_the_pipeline_matched(
+        self, tmp_path, monkeypatch
+    ):
+        """The per-frame filter the old observation-level `status` never was."""
+        root = tmp_path / 'processed'
+        write_sequence(root, [
+            frame_document(image_time='20180824T040118', status='MATCHED'),
+            frame_document(image_time='20180824T040248', status='ERROR'),
+            frame_document(image_time='20180824T040418', status='MATCHED'),
+        ])
+        monkeypatch.setenv('PANOPTES_PROCESSED_ROOT', str(root))
+
+        obs_info = obs_mod.ObservationInfo(
+            sequence_id=SEQUENCE_ID, image_query=obs_mod.USABLE_QUERY
+        )
+
+        assert list(obs_info.image_metadata.image_status) == ['MATCHED', 'MATCHED']
+        # The frame list follows the query, so a failed frame is not read either.
+        assert len(obs_info.image_list) == 2
+
+    def test_the_default_hides_nothing(self, tmp_path, monkeypatch):
+        """Defaulting to usable-only would read as an observation that never failed."""
+        root = tmp_path / 'processed'
+        write_sequence(root, [
+            frame_document(image_time='20180824T040118', status='MATCHED'),
+            frame_document(image_time='20180824T040248', status='ERROR'),
+        ])
+        monkeypatch.setenv('PANOPTES_PROCESSED_ROOT', str(root))
+
+        obs_info = obs_mod.ObservationInfo(sequence_id=SEQUENCE_ID)
+
+        assert 'ERROR' in list(obs_info.image_metadata.image_status)
+
     def test_a_document_missing_a_required_field_raises_naming_it(self, tmp_path, monkeypatch):
         no_uid = frame_document(image_time='20180824T040118')
         del no_uid['image']['uid']

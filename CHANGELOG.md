@@ -100,6 +100,19 @@
 - `ObservationInfo` takes a `processed_root` argument, overriding the setting
   for one instance, as `get_image_list` already took `archive_root`.
 
+- `observations.USABLE_QUERY` is the `image_query` that keeps only the frames
+  the pipeline processed cleanly, so the predicate has a name rather than being
+  a string literal at each call site. It is equality on `MATCHED`, which is
+  exactly how the index computes `num_usable`, and a test asserts the two agree
+  -- `ImageStatus` is ordered and `EXTRACTED` sorts above `MATCHED`, so this is
+  the one place to change if either definition moves.
+
+  This is the per-frame filter the removed observation-level `status` argument
+  was reaching for and was not: an observation marked `MATCHED` could still
+  carry `ERROR` frames, so filtering on the observation returned all of them.
+  Nothing is filtered by default, because defaulting to usable-only would hide
+  failed frames rather than report them.
+
 ### Fixed
 
 - A frame document that cannot be read raises rather than being skipped. The

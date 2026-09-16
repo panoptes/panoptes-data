@@ -130,14 +130,27 @@ be read-only or mirrored.
 document's nested maps flattened into the same column names the index carries:
 
 ```py
+from panoptes.data.observations import USABLE_QUERY, ObservationInfo
+
 obs_info = ObservationInfo('PAN012_358d0f_20180824T035917')
 
 obs_info.image_metadata[['image_uid', 'image_status', 'image_camera_exptime']]
 
-# Frames the pipeline actually matched, rather than frames that merely exist.
+# Only the frames the pipeline processed cleanly, rather than frames that
+# merely exist. `image_list` follows the query, so a failed frame is not read.
 obs_info = ObservationInfo('PAN012_358d0f_20180824T035917',
-                           image_query='image_status == "MATCHED"')
+                           image_query=USABLE_QUERY)
 ```
+
+`USABLE_QUERY` is `image_status == "MATCHED"`, which is exactly how the index
+computes `num_usable` -- so the frames you get are the ones the index counted.
+No filter is applied by default: defaulting to usable-only would silently hide
+failed frames, which reads as an observation that never had them.
+
+This is a *per-frame* filter, and the old observation-level `status` argument
+was not. An observation marked `MATCHED` could still contain `ERROR` frames --
+one 372-frame sequence in the archive has metadata for 310 -- so filtering on
+the observation handed you all of them.
 
 Every frame of the sequence has to have a readable document. One that does not
 raises, rather than quietly producing an observation with fewer frames -- the

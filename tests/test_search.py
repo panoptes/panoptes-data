@@ -336,6 +336,33 @@ class TestEndToEnd:
         assert len(obs_info.image_metadata) == 2
 
 
+def test_usable_query_agrees_with_num_usable(tmp_path, monkeypatch):
+    """`USABLE_QUERY` and the index must not disagree about what "usable" counts.
+
+    The index computes `num_usable` with equality on `MATCHED`, and so does
+    `USABLE_QUERY`. This is what notices if either side's definition moves --
+    `ImageStatus` is ordered, and `EXTRACTED` sorts above `MATCHED`.
+    """
+    from panoptes.data.observations import USABLE_QUERY, ObservationInfo
+
+    root = tmp_path / 'processed'
+    write_sequence(root, [
+        frame_document(image_time='20180824T040118', status='MATCHED'),
+        frame_document(image_time='20180824T040248', status='ERROR'),
+        frame_document(image_time='20180824T040418', status='MATCHED'),
+    ])
+    build_index(root)
+    monkeypatch.setenv('PANOPTES_PROCESSED_ROOT', str(root))
+    monkeypatch.delenv('PANOPTES_ARCHIVE_ROOT', raising=False)
+
+    num_usable = get_all_observations().set_index('sequence_sequence_id').loc[
+        SEQUENCE_ID
+    ].num_usable
+    filtered = ObservationInfo(sequence_id=SEQUENCE_ID, image_query=USABLE_QUERY)
+
+    assert len(filtered.image_metadata) == num_usable == 2
+
+
 def test_get_metadata_concatenates(monkeypatch):
     class FakeObsInfo:
         def __init__(self, meta=None):
