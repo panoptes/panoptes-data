@@ -11,9 +11,12 @@ uv run --group docs zensical serve          # live reload at localhost:8000
 uv run --group docs zensical build --clean # static site into site/
 ```
 
-CI runs `zensical build --clean --strict`. `--strict` turns warnings into
-errors: a link to a page that does not exist, or a `:::` block naming a module
-that cannot be imported, fails the build rather than publishing a hole.
+CI runs `zensical build --clean --strict`, which promotes the build's own
+warnings to errors -- a link to a page that does not exist, a page missing from
+the `nav`, a `:::` block naming a module that cannot be imported -- so the site
+fails to build rather than publishing a hole. It does **not** cover `griffe`'s
+docstring warnings, which are reported and do not fail the build; those are
+about the source, not the site.
 
 The site is configured in `zensical.toml` and published to
 [GitHub Pages](https://panoptes.github.io/panoptes-data/) by
@@ -32,9 +35,14 @@ There are no copies of anything.
   is no generated intermediate, nothing to run before a build, and nothing to
   gitignore.
 
-So a page in `docs/` is either a snippet line or a `:::` block. Prose that
-belongs to the package belongs in a docstring or in a root Markdown file; this
-directory is the arrangement of those, not a second place to write them.
+So a page in `docs/` carries a snippet line or a `:::` block and little else:
+a heading, and at most a sentence saying what the module is for. The exception
+is this page, which is prose about the documentation build and so has nowhere
+else to live.
+
+Everything else that belongs to the package belongs in a docstring or in a root
+Markdown file. This directory is the arrangement of those, not a second place to
+write them.
 
 ## Adding to the API reference
 
