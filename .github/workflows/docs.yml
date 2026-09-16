@@ -5,16 +5,23 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  # Publishing is otherwise only a side effect of pushing. A deploy you can
+  # trigger on demand is what you want when the site needs republishing and
+  # `main` has not moved -- after switching the Pages source, for instance.
+  workflow_dispatch:
 
-# Required permissions for deploying to GitHub Pages
-permissions:
-  contents: write
-  pages: write
+# Permissions are per job, not workflow-wide. `build-docs` runs on pull
+# requests and executes the branch's own code -- `mkdocstrings` imports the
+# package to read its docstrings -- so it gets nothing beyond reading the
+# checkout. Only `deploy-docs`, which runs from `main` and builds nothing, can
+# mint an OIDC token or call the Pages API.
 
 jobs:
   build-docs:
-    name: Build and publish docs
+    name: Build docs
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         python-version: [3.12]
@@ -44,16 +51,34 @@ jobs:
       - name: Build docs
         run: uv run --group docs zensical build --clean --strict
 
-      - name: Upload HTML docs artifact
-        uses: actions/upload-artifact@v4
+      # Uploaded on pull requests too, so a reviewer can download the built
+      # site; only the deploy job below is gated on `main`.
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
         with:
-          name: docs-html
           path: site
 
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: site
-          publish_branch: gh-pages
+  deploy-docs:
+    name: Publish to GitHub Pages
+    needs: build-docs
+    if: >-
+      github.ref == 'refs/heads/main'
+      && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    # Scoped to the deploy, so a slow pull-request build never queues behind or
+    # ahead of a publication. A queued deploy should publish the newest `main`
+    # rather than wait its turn; one already in flight is left to finish.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
