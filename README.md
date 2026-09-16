@@ -32,8 +32,6 @@ pip install panoptes-data
 
 ## Examples
 
-See the example Jupyter Notebooks in the `notebooks/` directory.
-
 ### Finding observations
 
 ```py
@@ -88,6 +86,142 @@ sequence gets the mean of its frames' pointings *and* the largest deviation
 from that mean, and a search cone is widened per sequence by that sequence's own
 drift. An observation whose mean sits just outside the cone, but which spent
 half the night inside it, is found.
+
+### The search surface at a glance
+
+```py
+from datetime import timedelta
+
+from panoptes.data.search import (
+    find_simultaneous,
+    get_all_observations,
+    search_observations,
+)
+
+# ─── The table ────────────────────────────────────────────────────────────────
+# Reads observations.parquet, then one pass over frames.parquet adds
+# mount_ra/mount_dec + *_drift, and iso/airmass/moonfrac/moonsep.
+obs = get_all_observations()
+
+# Reuse it as `source` instead of re-reading the index. Never mutated.
+search_observations(source=obs, start_date="2024-01-01")
+
+# ─── Where ────────────────────────────────────────────────────────────────────
+search_observations(start_date="2024-01-01")  # all-sky
+search_observations(by_name="M42", radius=5)  # resolved name
+search_observations(ra=83.8, dec=-5.4, radius=1)  # explicit cone
+
+# ─── When ─────────────────────────────────────────────────────────────────────
+search_observations(start_date="2024-01-01", end_date="2024-12-31")
+search_observations(start_date="2024-03-01", duration="30 days")  # forward
+search_observations(start_date="2024-03-12", duration="7 days before and after")
+search_observations(duration="90 days")  # last 90d
+search_observations(duration=timedelta(days=-30))  # backward
+
+# ─── Which ────────────────────────────────────────────────────────────────────
+search_observations(
+    start_date="2024-01-01",
+    min_num_frames=300,  # frames with a document
+    min_num_usable=300,  # frames actually processed -- not the same number
+    min_duration_minutes=180,
+    unit_id="PAN001",  # str or list
+    field_name="M42",
+    camera_id=["aaaaaa", "bbbbbb"],
+    query="iso == 100 and moonfrac < 0.25 and airmass < 1.5",  # runs last
+)
+
+# ─── Pairs ────────────────────────────────────────────────────────────────────
+find_simultaneous(obs, across="camera_id")  # or "unit_id"
+
+# ─── What raises ──────────────────────────────────────────────────────────────
+search_observations(duration="1 day", end_date="2024-01-01")  # both set the end
+search_observations(ra=83.8)  # needs both ra and dec
+search_observations(duration="a fortnight")  # not a duration
+search_observations(query="seeing < 3")  # lists the real columns
+search_observations("M42")  # TypeError: keyword-only
+```
+
+**Where.** A position is optional, so a search can be all-sky. The cone is a box
+whose half-width is `radius` *plus that sequence's own drift*, so a sequence that
+wandered into it is found; RA is compared as an angle, so a cone spanning 0h
+works. Giving exactly one of `ra`/`dec` raises -- half a position is a typo, not
+a request for everything.
+
+**When.** `duration` takes hours through years, with an optional direction
+(`before`, `after`, `ago`, `before and after`, `either side of`), or a
+`timedelta`. It is anchored on `start_date` and runs forward; with no
+`start_date` it is anchored on now and runs backward, because a window in the
+future holds no observations. It is mutually exclusive with `end_date`, since
+both set the same edge. Months and years are calendar spans, so `"6 months"` from
+March 12 ends September 12.
+
+**Which.** `min_num_usable` is not `min_num_frames`: one 372-frame sequence in
+the archive has 310 usable frames and 62 errors, and only the first tells them
+apart. `iso`, `airmass`, `moonfrac` and `moonsep` are per-frame header readings
+that `observations.parquet` carries no column for, so they are reduced to a
+sequence mean and attached alongside the pointing -- which is why `query` reaches
+them. `query` runs last so it can also name `exptime`, which the search derives.
+
+**Pairs.** Sequences recorded at the same time by different hardware are the
+control the photometry rebuild compares against, since the sky was the same and
+the camera was not. Pairing is on overlap between `start_time` and `end_time`,
+not on a calendar date: the units sit at different longitudes, so any UTC-based
+"night" is the wrong slice of the night for somebody.
+
+**The rule underneath all of it: a filter narrows, it never guesses.** A sequence
+whose duration the index could not measure fails a duration cut rather than
+passing it, unknown drift counts as zero rather than infinity, and a malformed
+argument raises instead of quietly returning everything or nothing.
+
+### Working with the results
+
+The result is a DataFrame, so the survey-wide questions are ordinary pandas.
+Reading the index is the expensive part, so read it once and pass it back in as
+`source` rather than searching from scratch:
+
+```py
+from panoptes.data.search import get_all_observations, search_observations
+
+observations = get_all_observations()
+
+# Which fields have the most frames, and roughly where are they?
+totals = (
+    observations.groupby("field_name")
+    .agg(
+        num_frames=("num_frames", "sum"),
+        num_usable=("num_usable", "sum"),
+        total_exptime=("total_exptime", "sum"),
+        mount_ra=("mount_ra", "median"),
+        mount_dec=("mount_dec", "median"),
+    )
+    .sort_values("num_frames", ascending=False)
+)
+
+# Everything around the busiest field, whatever each observation called it.
+top = totals.iloc[0]
+nearby = search_observations(
+    ra=top.mount_ra, dec=top.mount_dec, min_num_frames=10, source=observations
+)
+```
+
+`source` is never modified in place.
+
+### Reading one observation's frames
+
+```py
+from panoptes.data.observations import ObservationInfo
+
+obs_info = ObservationInfo(meta=nearby.iloc[0])
+
+# One row per frame, indexed on image time. Defaults to the frames the
+# pipeline processed cleanly; pass image_query='' for every frame it has.
+obs_info.image_metadata.to_csv(f"{obs_info.sequence_id}-image-metadata.csv")
+
+# Where each frame is. Paths under PANOPTES_ARCHIVE_ROOT when one is set,
+# archive URLs otherwise -- which name where a frame lives, but nothing
+# serves them.
+obs_info.image_list
+```
 
 ### Configuration
 

@@ -81,10 +81,6 @@ test = [
 line-length = 100
 target-version = "py312"
 src = ["src"]
-# Notebooks are exploratory and re-running one re-dirties it. Linting them
-# produces churn nobody acts on, so `ruff check .` covers the code people
-# actually edit.
-extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
 # The set `panoptes-pipeline` uses: pycodestyle errors, pyflakes, import

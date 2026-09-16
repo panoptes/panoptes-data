@@ -80,8 +80,9 @@ a second build, from a second config, of the same site.
 pinned in `[tool.ruff.lint]` — `E`, `F`, `I`, `UP`, matching
 `panoptes-pipeline` — precisely so that "clean" means the same thing on every
 machine and across ruff releases; ruff's own defaults move, and an unpinned
-config makes each upgrade look like a regression. `notebooks/` is excluded:
-re-running a notebook re-dirties it, and nobody acts on the churn.
+config makes each upgrade look like a regression. Nothing is excluded: the
+`notebooks/` exclusion went with the notebooks, and a second place where
+"clean" means something else is the thing the pinned rule set exists to avoid.
 
 **`uv run ruff format .` passes too.** Double quotes, ruff's default, matching
 `panoptes-pipeline`. Let the formatter decide: don't hand-wrap a line shorter
@@ -92,6 +93,14 @@ continuation line.
 
 **A format-only change goes in its own commit**, never mixed with a real one.
 Reviewing a behavior change through a reflow is how things get missed.
+
+**Comments say what the code does, not what it used to do.** No "this used to
+...", "the previous version ...", "X is now Y". A reader of the current file
+cannot check a claim about a version they do not have, and the claim is stale
+the moment the next change lands. The history belongs in the commit, the
+changelog and the pull request, which is where a reader who wants it will look.
+The rare exception is a comment that stops someone reintroducing a specific
+bug, and it names the issue rather than narrating the diff.
 
 ## Architecture
 
@@ -177,6 +186,34 @@ not from any URL field.
   naming where a frame lives is useful even when nothing will serve it.
 - Parquet over CSV is load-bearing: dtypes live in the file, so a serial like
   `032071000633` comes back a string instead of `3.207100e+10` (panoptes/panoptes-data#13).
+- **`get_metadata` raises on a partial read.** Swallowing a per-sequence
+  failure makes half the archive and all of it the same return value.
+  `MetadataUnavailableError` carries the failures *and* the rows that did read,
+  so `errors='warn'` is a choice a caller makes rather than a default they are
+  handed. Same rule as `read_frames` and `get_image_list`.
+- **A search with no position is all-sky, and that is the normal case**
+  (panoptes/panoptes-data#14). Half a position — one of `ra`/`dec` — is an
+  error, not a request for everything; a cone wide enough to be the whole sky
+  is not how to ask for everything either.
+- **`duration` and `end_date` are exclusive, and a duration can face both
+  ways.** `'10 days before and after'` is why `duration_window` returns a pair
+  rather than an end date: a window can straddle its anchor, and no single
+  parsed datetime says so. (`dateparser` reads that phrase as `'10 days after'`
+  and returns one date, silently.) Anchored on `start_date` it runs forward; with
+  no `start_date` it is anchored on now and runs backward, because forward from
+  now there is nothing to find. Months and years go through `relativedelta`, so
+  they stay calendar spans.
+- **The frame facts are means with no spread, unlike pointing.** `iso`,
+  `airmass`, `moonfrac` and `moonsep` are per-frame readings `observations.parquet`
+  has no column for, so `add_frame_facts` reduces them in the same pass that
+  derives pointing. They get no drift companion on purpose: a cone is a
+  membership test that drift can move a sequence into, whereas "ISO 100" is a
+  description, and widening it per row would make one threshold mean a
+  different thing for every sequence.
+- **`find_simultaneous` pairs on time overlap, never on a "night".** The units
+  sit at different longitudes, so a UTC calendar date is a different slice of
+  the observing night for each of them. `start_time`/`end_time` are contract
+  columns and admit no such argument.
 
 ## Tests
 

@@ -4,6 +4,11 @@
 
 ### Changed
 
+- `search_observations` takes keyword arguments only. It has eighteen
+  parameters, and inserting one used to rebind every positional argument after
+  it -- a `source` DataFrame passed positionally would silently arrive as
+  `min_num_usable`. A positional call now raises. [#34][pr-34]
+
 - Metadata is read from the documents `panoptes-pipeline` writes -- an
   `observation.json` per sequence, a `metadata.json` per frame, and the parquet
   index built by walking them -- rather than from a Firestore-derived
@@ -69,6 +74,37 @@
 
 ### Added
 
+- A search needs no position: `search_observations` is all-sky with no `coords`,
+  `by_name` or `ra`/`dec`, so a unit and a date range is a complete query.
+  Giving exactly one of `ra` and `dec` is an error. [#14][issue-14], [#34][pr-34]
+
+- `search_observations` takes the cuts [data contract][contract] section 9 names
+  for benchmark selection: `min_num_usable`, `min_duration_minutes`,
+  `field_name`, `camera_id`, and a `query` string applied last. `min_num_usable`
+  is not `min_num_frames` -- one 372-frame sequence in the archive has 310
+  usable. [#14][issue-14], [#34][pr-34]
+
+- `search_observations` takes a `duration` in place of an `end_date`: `"90
+  days"`, `"6 months"`, `"10 days before and after"`, or a `timedelta`. It is
+  anchored on `start_date` and runs forward, or on now and runs backward when
+  there is no `start_date`. Mutually exclusive with `end_date`, since both set
+  the same edge. A negative `timedelta` runs backward rather than producing a
+  window that ends before it starts. Also `--duration` on the `search` command.
+  [#34][pr-34]
+
+- `iso`, `airmass`, `moonfrac` and `moonsep` on every sequence, via
+  `add_frame_facts`. `observations.parquet` has no column for any of them
+  because each is a per-frame reading, so each is reduced to its sequence mean.
+  [#14][issue-14], [#34][pr-34]
+
+- `find_simultaneous` pairs sequences of one field recorded at the same time by
+  different cameras or units, on overlap between `start_time` and `end_time`
+  rather than on a calendar date. A sequence with no recorded field or no
+  hardware id does not pair: it cannot be shown to match or to differ.
+  [#14][issue-14], [#34][pr-34]
+
+- A `pairs` CLI command over `find_simultaneous`.
+
 - `PANOPTES_PROCESSED_ROOT` names the pipeline's document tree, and
   `PANOPTES_INDEX_ROOT` names where the parquet index lives -- defaulting to the
   processed tree, which is where the pipeline builds it. It is a separate
@@ -120,6 +156,18 @@
 
 ### Fixed
 
+- `get_metadata` raises on a partial read instead of wrapping the per-sequence
+  loop in `except Exception: pass`, which made half the archive and all of it
+  the same return value. `MetadataUnavailableError` carries the failures and
+  the rows that did read; `errors='warn'` returns the partial table.
+  [#13][issue-13], [#34][pr-34]
+
+- The `search` and `get-metadata` CLI commands no longer bind one short flag to
+  two options. `-s` was `--start-date` *and* `--end-date`, so `-s 2024-01-01`
+  set the end date; `-r` was `--ra` *and* `--radius`. `--end-date` takes `-e`,
+  `--ra` is long-form only, `--sequence-id` takes `-i`, and `--min-duration`
+  takes `-L` so `-D` can be `--duration`. [#34][pr-34]
+
 - `read_frames` applies the contract's dropped blocks and reindexes to its
   required columns, so reading documents directly and reading `frames.parquet`
   produce the same column names. Without the first, `image.params` -- a whole
@@ -150,12 +198,19 @@
 
 ### Removed
 
+- The two example notebooks, and with them the `notebooks/` ruff exclusion.
+  Their worked examples are in the README; what did not survive the move is the
+  part that no longer works, a `wget` list built from archive URLs that 404
+  anonymously. [#34][pr-34]
+
 - `SurveySettings.img_metadata_url` and `SurveySettings.observations_url`, and
   with them the last two things this package fetched over the network. Nothing
   serves either one with current data.
 
 [issue-12]: https://github.com/panoptes/panoptes-data/issues/12
 [issue-13]: https://github.com/panoptes/panoptes-data/issues/13
+[issue-14]: https://github.com/panoptes/panoptes-data/issues/14
+[pr-34]: https://github.com/panoptes/panoptes-data/pull/34
 [issue-15]: https://github.com/panoptes/panoptes-data/issues/15
 [contract]: https://github.com/panoptes/panoptes-pipeline/blob/main/plans/data-contract.md
 
