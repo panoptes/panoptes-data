@@ -61,6 +61,17 @@ packages = ["src/panoptes"]
 # blocks that duplicated these groups are gone.
 [dependency-groups]
 dev = [{ include-group = "test" }, "ruff>=0.5.0"]
+# The documentation toolchain only. The runtime dependencies autodoc needs to
+# import `panoptes.data` come from the project itself, which `uv sync` installs
+# alongside this group -- relisting them here is how `docs/requirements.txt`
+# drifted from `[project.dependencies]` until it was carrying `photutils`, which
+# nothing in this package imports.
+docs = [
+    "linkify-it-py",
+    "myst-parser",
+    "pydata-sphinx-theme",
+    "sphinx>=3.2.1",
+]
 test = [
     "coverage>=7.0,<8.0",
     "pytest>=7.0,<8.0",

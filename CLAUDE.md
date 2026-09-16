@@ -38,6 +38,8 @@ uv run pytest -k pointing -q
 uv run pytest --cov=panoptes.data --cov-report=term-missing
 uv run ruff check .
 uv build                      # sdist + wheel into dist/
+uv sync --group docs          # project + Sphinx toolchain
+uv run --group docs sphinx-build -b html docs docs/_build/html
 ```
 
 If a sync dies on a download, raise `UV_HTTP_TIMEOUT` (default 30s) rather than
@@ -51,10 +53,13 @@ local development, the lint job and the test job go through `uv` and
 second way to install the test dependencies — that is what the hatch envs were,
 a hand-copy of the `test` group that could drift from it.
 
-The one path still on `pip` is the docs workflow, which installs
-`docs/requirements.txt`. That file hand-copies the runtime dependencies and is
-the same drift waiting to happen; migrating it is unfinished work, not a
-design.
+The docs build goes through `uv` too, in CI and on Read the Docs alike:
+`uv sync --locked --group docs`, then `sphinx-build`. The `docs` group holds
+the Sphinx toolchain and nothing else — the runtime dependencies autodoc
+imports come from the project, which `uv sync` installs with the group. There
+is no `docs/requirements.txt`; it hand-copied `[project.dependencies]` and had
+already drifted from it. A package autodoc needs belongs in
+`[project.dependencies]`, never in a second list.
 
 ### Linting
 

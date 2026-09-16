@@ -1,4 +1,4 @@
-name: Build, test, and publish documentation
+name: Build and publish documentation
 
 on:
   push:
@@ -12,55 +12,8 @@ permissions:
   pages: write
 
 jobs:
-  test:
-    name: Run tests and upload coverage
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.12]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: "pip-${{ runner.os }}-py-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}"
-          restore-keys: |
-            pip-${{ runner.os }}-py-${{ matrix.python-version }}-
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r docs/requirements.txt
-          pip install -e .
-          pip install pytest pytest-cov
-
-      - name: Run tests with coverage
-        run: |
-          pytest --cov=panoptes.data --cov-report=xml:coverage.xml --cov-report=html:htmlcov -q
-
-      - name: Upload coverage report (xml)
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-xml
-          path: coverage.xml
-
-      - name: Upload coverage HTML
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html
-          path: htmlcov
-
   build-docs:
     name: Build and publish docs
-    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -69,30 +22,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # `hatch-vcs` derives the version from the git tag, so the build
+          # needs the tags, not just the tip.
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: "pip-${{ runner.os }}-py-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}"
-          restore-keys: |
-            pip-${{ runner.os }}-py-${{ matrix.python-version }}-
-
+      # The docs toolchain is the `docs` group; the runtime dependencies
+      # autodoc imports come from the project, which `uv sync` installs with
+      # it. `--locked` fails rather than re-resolving, so a dependency edit
+      # that skipped `uv lock` is caught here.
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install -r docs/requirements.txt
-          pip install -e .
+        run: uv sync --locked --group docs --python ${{ matrix.python-version }}
 
+      # `--group docs` on the run as well as the sync: `uv run` re-syncs, and
+      # naming the group keeps the toolchain present regardless of how it
+      # treats packages outside the default groups.
       - name: Build docs
         working-directory: docs
-        run: make html
+        run: uv run --group docs make html
 
       - name: Upload HTML docs artifact
         uses: actions/upload-artifact@v4
