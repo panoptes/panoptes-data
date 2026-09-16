@@ -186,15 +186,15 @@ not from any URL field.
   naming where a frame lives is useful even when nothing will serve it.
 - Parquet over CSV is load-bearing: dtypes live in the file, so a serial like
   `032071000633` comes back a string instead of `3.207100e+10` (panoptes/panoptes-data#13).
-- **`get_metadata` raises on a partial read.** It used to wrap the whole loop in
-  `except Exception: pass`, so half the archive and all of it were the same
-  return value. `MetadataUnavailableError` carries the failures *and* the rows
-  that did read, so `errors='warn'` is a choice a caller makes rather than a
-  default they are handed. Same rule as `read_frames` and `get_image_list`.
-- **A search with no position is all-sky, and that is the normal case.** The
-  `ra=180, dec=0, radius=290` in the CLI was a cone wide enough to be the sky,
-  standing in for a filter that did not exist (panoptes/panoptes-data#14). Half
-  a position — one of `ra`/`dec` — is an error, not a request for everything.
+- **`get_metadata` raises on a partial read.** Swallowing a per-sequence
+  failure makes half the archive and all of it the same return value.
+  `MetadataUnavailableError` carries the failures *and* the rows that did read,
+  so `errors='warn'` is a choice a caller makes rather than a default they are
+  handed. Same rule as `read_frames` and `get_image_list`.
+- **A search with no position is all-sky, and that is the normal case**
+  (panoptes/panoptes-data#14). Half a position — one of `ra`/`dec` — is an
+  error, not a request for everything; a cone wide enough to be the whole sky
+  is not how to ask for everything either.
 - **The frame facts are means with no spread, unlike pointing.** `iso`,
   `airmass`, `moonfrac` and `moonsep` are per-frame readings `observations.parquet`
   has no column for, so `add_frame_facts` reduces them in the same pass that
