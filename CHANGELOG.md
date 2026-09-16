@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- The release workflow builds with `uv build` instead of installing `hatch`
+  with `pip`. It was the only workflow not going through `uv`, and the second
+  way to reach the same `hatchling` backend was a way for the release build to
+  drift from the one every other job and every developer runs.
+
 ### Fixed
 
 - The GitHub release no longer depends on the PyPI upload succeeding. It was
