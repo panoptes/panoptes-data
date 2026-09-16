@@ -60,3 +60,14 @@ jobs:
         with:
           name: coverage-xml
           path: coverage.xml
+
+      # The artifact above is for looking at a single run; this is what gives
+      # the README's coverage badge something to report. `fail_ci_if_error`
+      # stays false deliberately: a coverage upload failing is not a reason to
+      # fail a test run that passed.
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v7
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false

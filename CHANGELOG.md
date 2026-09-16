@@ -344,6 +344,18 @@
   Verified by running the suite before and after: 419 statements, 71 missing,
   90 branches, one partial, 83% either way.
 
+- The README carries badges: the test and documentation workflows, coverage,
+  the PyPI version, the Python versions it supports, the license, and ruff.
+  The documentation badge was the only one there, and it linked to a site that
+  has since moved to GitHub Pages.
+
+- The test workflow uploads coverage to Codecov, which is what gives the
+  coverage badge something to report -- `coverage.xml` was only ever a
+  per-run artifact. `fail_ci_if_error` is false on purpose: an upload failing
+  is not a reason to fail a test run that passed. **The badge stays grey until
+  the repository is enabled at codecov.io**, which is a setting rather than
+  something the workflow can do for itself.
+
 ### Release tooling
 
 - The release workflow refuses a tag it cannot take release notes from. The

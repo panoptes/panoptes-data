@@ -1,4 +1,10 @@
-[![Documentation](https://github.com/panoptes/panoptes-data/actions/workflows/docs.yml/badge.svg)](https://panoptes.github.io/panoptes-data/)
+[![Tests](https://github.com/panoptes/panoptes-data/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/panoptes/panoptes-data/actions/workflows/tests.yml)
+[![Documentation](https://github.com/panoptes/panoptes-data/actions/workflows/docs.yml/badge.svg?branch=main)](https://panoptes.github.io/panoptes-data/)
+[![Coverage](https://codecov.io/gh/panoptes/panoptes-data/branch/main/graph/badge.svg)](https://codecov.io/gh/panoptes/panoptes-data)
+[![PyPI](https://img.shields.io/pypi/v/panoptes-data)](https://pypi.org/project/panoptes-data/)
+[![Python](https://img.shields.io/pypi/pyversions/panoptes-data)](https://pypi.org/project/panoptes-data/)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE.txt)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 # PANOPTES Data tools
 
