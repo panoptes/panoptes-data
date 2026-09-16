@@ -92,3 +92,20 @@ extend-exclude = ["notebooks"]
 # moves between ruff versions, so an unpinned config makes "clean" mean
 # something different on every machine.
 select = ["E", "F", "I", "UP"]
+
+# Coverage settings, in the file that holds every other tool's settings rather
+# than in a `.coveragerc` beside it. `branch` is why the report carries branch
+# counts, and `source` is why a bare `uv run pytest --cov` needs no argument.
+[tool.coverage.run]
+branch = true
+source = ["panoptes.data"]
+
+# Naming `exclude_lines` replaces coverage's default rather than adding to it,
+# so `pragma: no cover` has to be restated. The rest are the exclusions this
+# package actually has code for.
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+]

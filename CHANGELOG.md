@@ -313,6 +313,22 @@
   `[tool.ruff]` configuration CI reads, pinned to the same version, so a hook
   and a job cannot disagree.
 
+- Coverage is configured in `pyproject.toml` under `[tool.coverage]`, and
+  `.coveragerc` is gone. The settings were doing real work -- `branch` is why
+  the report carries branch counts, and `source` is why a bare `pytest --cov`
+  needs no argument -- so this moves them rather than dropping them, into the
+  file that already holds every other tool's configuration.
+
+  Four exclusions went with the move rather than through it. `if self.debug`,
+  `raise AssertionError`, `raise NotImplementedError` and `if 0:` matched
+  nothing in `src/`; they came from the same generated template as the
+  `CONTRIBUTING.md` that was replaced. So did `[paths]`, which reconciled
+  coverage measured against an installed copy with the source tree -- something
+  the editable install `uv sync` produces does not need.
+
+  Verified by running the suite before and after: 419 statements, 71 missing,
+  90 branches, one partial, 83% either way.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a
