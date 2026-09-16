@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -515,50 +517,191 @@ class TestAddFrameFacts:
         assert result.moonsep == pytest.approx(60.0)
 
 
-class TestDuration:
-    """A window given as a length rather than a far end."""
+class TestDurationParsing:
+    """The shapes a `duration` can take, and the ones it must refuse."""
 
-    ANCHOR = "3/12/2024"
+    ANCHOR = "3/12/2024"  # March 12, read month-first as the fleet writes dates.
 
-    def window(self, duration, default="forward"):
-        start, end = duration_window(duration, as_utc(self.ANCHOR), default)
+    def window(self, duration, default="forward", anchor=None):
+        start, end = duration_window(duration, as_utc(anchor or self.ANCHOR), default)
         return str(start.date()), str(end.date())
 
-    def test_a_bare_duration_runs_from_the_anchor(self):
-        assert self.window("90 days") == ("2024-03-12", "2024-06-10")
+    @pytest.mark.parametrize(
+        "duration,expected",
+        [
+            ("48 hours", ("2024-03-12", "2024-03-14")),
+            ("1 day", ("2024-03-12", "2024-03-13")),
+            ("90 days", ("2024-03-12", "2024-06-10")),
+            ("3 weeks", ("2024-03-12", "2024-04-02")),
+            ("6 months", ("2024-03-12", "2024-09-12")),
+            ("1 year", ("2024-03-12", "2025-03-12")),
+        ],
+    )
+    def test_every_unit(self, duration, expected):
+        assert self.window(duration) == expected
 
-    def test_before_and_after_puts_the_window_on_both_sides(self):
-        """The case a single parsed datetime cannot express."""
-        assert self.window("10 days before and after") == ("2024-03-02", "2024-03-22")
+    @pytest.mark.parametrize("duration", ["1 day", "1 days", "2 week", "2 weeks"])
+    def test_singular_and_plural_both_read(self, duration):
+        assert self.window(duration)[0] == "2024-03-12"
+
+    @pytest.mark.parametrize(
+        "duration",
+        ["90 days", "90days", "  90 days  ", "90 DAYS", "90 Days", "90\tdays"],
+    )
+    def test_spacing_and_case_do_not_matter(self, duration):
+        assert self.window(duration) == ("2024-03-12", "2024-06-10")
+
+    @pytest.mark.parametrize(
+        "duration,expected",
+        [
+            ("10 days", ("2024-03-12", "2024-03-22")),
+            ("10 days after", ("2024-03-12", "2024-03-22")),
+            ("10 days ahead", ("2024-03-12", "2024-03-22")),
+            ("10 days forward", ("2024-03-12", "2024-03-22")),
+            ("10 days forwards", ("2024-03-12", "2024-03-22")),
+            ("10 days before", ("2024-03-02", "2024-03-12")),
+            ("10 days ago", ("2024-03-02", "2024-03-12")),
+            ("10 days backward", ("2024-03-02", "2024-03-12")),
+            ("10 days backwards", ("2024-03-02", "2024-03-12")),
+            ("10 days before and after", ("2024-03-02", "2024-03-22")),
+            ("10 days either side", ("2024-03-02", "2024-03-22")),
+            ("10 days either side of", ("2024-03-02", "2024-03-22")),
+        ],
+    )
+    def test_every_direction_word(self, duration, expected):
+        assert self.window(duration) == expected
+
+    @pytest.mark.parametrize(
+        "duration",
+        ["10 Days Before And After", "10 days  before   and after", "10 DAYS EITHER SIDE"],
+    )
+    def test_a_direction_phrase_survives_case_and_spacing(self, duration):
+        assert self.window(duration) == ("2024-03-02", "2024-03-22")
+
+    @pytest.mark.parametrize("default", ["forward", "backward", "both"])
+    def test_a_stated_direction_beats_the_default(self, default):
+        assert self.window("10 days after", default=default) == ("2024-03-12", "2024-03-22")
+        assert self.window("10 days before", default=default) == ("2024-03-02", "2024-03-12")
+
+    @pytest.mark.parametrize(
+        "default,expected",
+        [
+            ("forward", ("2024-03-12", "2024-03-22")),
+            ("backward", ("2024-03-02", "2024-03-12")),
+            ("both", ("2024-03-02", "2024-03-22")),
+        ],
+    )
+    def test_the_default_decides_when_the_duration_is_silent(self, default, expected):
+        assert self.window("10 days", default=default) == expected
+
+    @pytest.mark.parametrize(
+        "anchor,duration,expected",
+        [
+            # A calendar month, not 30 days: the day of the month is kept where
+            # it exists and clamped to the month's end where it does not.
+            ("2024-01-31", "1 month", ("2024-01-31", "2024-02-29")),
+            ("2023-01-31", "1 month", ("2023-01-31", "2023-02-28")),
+            ("2024-02-29", "1 year", ("2024-02-29", "2025-02-28")),
+            ("2024-12-15", "2 months", ("2024-12-15", "2025-02-15")),
+            ("2024-01-15", "2 months before", ("2023-11-15", "2024-01-15")),
+            ("2024-03-31", "1 month before", ("2024-02-29", "2024-03-31")),
+        ],
+    )
+    def test_months_and_years_are_calendar_spans(self, anchor, duration, expected):
+        assert self.window(duration, anchor=anchor) == expected
+
+    def test_a_year_either_side_spans_two(self):
         assert self.window("1 year either side of") == ("2023-03-12", "2025-03-12")
 
-    def test_a_direction_word_overrides_the_default(self):
-        assert self.window("2 weeks before") == ("2024-02-27", "2024-03-12")
-        assert self.window("3 weeks after", default="backward") == ("2024-03-12", "2024-04-02")
+    def test_zero_is_an_empty_window_not_an_error(self):
+        assert self.window("0 days") == ("2024-03-12", "2024-03-12")
+        assert self.window("0 days before and after") == ("2024-03-12", "2024-03-12")
 
-    def test_the_default_applies_when_the_duration_is_silent(self):
-        assert self.window("6 months", default="backward") == ("2023-09-12", "2024-03-12")
+    def test_a_very_long_span(self):
+        assert self.window("100 years") == ("2024-03-12", "2124-03-12")
 
-    def test_months_and_years_are_calendar_spans(self):
-        """Six months from March 12 is September 12, not 182.6 days later."""
-        assert self.window("6 months") == ("2024-03-12", "2024-09-12")
-        assert self.window("1 year") == ("2024-03-12", "2025-03-12")
+    @pytest.mark.parametrize(
+        "duration,expected",
+        [
+            (timedelta(days=30), ("2024-03-12", "2024-04-11")),
+            (timedelta(hours=36), ("2024-03-12", "2024-03-13")),
+            (timedelta(0), ("2024-03-12", "2024-03-12")),
+            # Negative means backward, not a window ending before it starts.
+            (timedelta(days=-30), ("2024-02-11", "2024-03-12")),
+            (timedelta(hours=-36), ("2024-03-10", "2024-03-12")),
+        ],
+    )
+    def test_a_timedelta_is_taken_as_given(self, duration, expected):
+        assert self.window(duration) == expected
 
-    def test_a_timedelta_is_taken_as_given(self):
-        from datetime import timedelta
-
-        assert self.window(timedelta(days=30)) == ("2024-03-12", "2024-04-11")
-
-    def test_hours_are_a_unit(self):
-        assert self.window("48 hours") == ("2024-03-12", "2024-03-14")
-
-    def test_an_unreadable_duration_lists_the_forms_that_work(self):
+    @pytest.mark.parametrize(
+        "duration",
+        [
+            "a fortnight",
+            "90 parsecs",
+            "90 days sideways",
+            "10 days before and after and before",
+            "-5 days",
+            "1.5 days",
+            "ninety days",
+            "days",
+            "90",
+            "",
+            "   ",
+            "90 days 10 hours",
+            "next tuesday",
+        ],
+    )
+    def test_what_is_refused(self, duration):
+        """A duration that parsed as something else would move the window silently."""
         with pytest.raises(ValueError, match="not a duration this understands"):
+            parse_duration(duration)
+
+    def test_the_refusal_names_the_forms_that_work(self):
+        with pytest.raises(ValueError) as excinfo:
             parse_duration("a fortnight")
-        with pytest.raises(ValueError, match="not a duration this understands"):
-            parse_duration("90 parsecs")
 
-    def test_a_search_window_from_a_duration(self):
+        message = str(excinfo.value)
+        assert "90 days" in message
+        assert "10 days before and after" in message
+
+    @pytest.mark.parametrize(
+        "duration",
+        [
+            "0 days",
+            "90 days",
+            "6 months before",
+            "10 days before and after",
+            "1 year either side of",
+            "100 years",
+            timedelta(days=-30),
+            timedelta(0),
+        ],
+    )
+    @pytest.mark.parametrize("default", ["forward", "backward", "both"])
+    def test_a_window_never_ends_before_it_starts(self, duration, default):
+        """An inverted window matches nothing, which reads as an empty archive."""
+        start, end = duration_window(duration, as_utc(self.ANCHOR), default)
+
+        assert start <= end
+
+    def test_the_window_keeps_the_anchor_timezone(self):
+        start, end = duration_window("1 day", as_utc(self.ANCHOR), "forward")
+
+        assert str(start.tz) == "UTC"
+        assert str(end.tz) == "UTC"
+
+    def test_an_anchor_with_a_time_of_day_is_not_rounded(self):
+        start, end = duration_window("12 hours", as_utc("2024-03-12 18:30"), "forward")
+
+        assert str(start) == "2024-03-12 18:30:00+00:00"
+        assert str(end) == "2024-03-13 06:30:00+00:00"
+
+
+class TestDurationSearch:
+    """`duration` as `search_observations` uses it."""
+
+    def test_a_window_from_a_duration(self):
         results = search_observations(
             source=observations_table(), start_date="2023-01-01", duration="30 days"
         )
@@ -568,8 +711,7 @@ class TestDuration:
             "PAN001_bbbbbb_20230102T000000",
         ]
 
-    def test_a_two_sided_search_window(self):
-        """Anchored on 2023-06-01, ten days either way keeps only the June sequence."""
+    def test_a_two_sided_window(self):
         results = search_observations(
             source=observations_table(),
             start_date="2023-06-01",
@@ -577,6 +719,55 @@ class TestDuration:
         )
 
         assert list(results.sequence_sequence_id) == ["PAN002_cccccc_20230601T000000"]
+
+    def test_a_backward_window_from_a_stated_start(self):
+        results = search_observations(
+            source=observations_table(), start_date="2023-06-05", duration="1 year before"
+        )
+
+        assert len(results) == 3
+
+    def test_a_window_that_lands_on_nothing(self):
+        results = search_observations(
+            source=observations_table(), start_date="2023-03-01", duration="10 days"
+        )
+
+        assert len(results) == 0
+        assert list(results.columns) != []
+
+    @pytest.mark.parametrize("duration", ["0 days", "0 days before and after"])
+    def test_a_zero_window_keeps_only_what_sits_exactly_on_it(self, duration):
+        """The window is inclusive at both ends, so an exact match survives it."""
+        results = search_observations(
+            source=observations_table(), start_date="2023-01-01", duration=duration
+        )
+
+        assert list(results.sequence_sequence_id) == ["PAN001_aaaaaa_20230101T000000"]
+
+    def test_both_ends_of_the_window_are_inclusive(self):
+        results = search_observations(
+            source=observations_table(), start_date="2023-01-01", duration="1 day"
+        )
+
+        assert list(results.sequence_sequence_id) == [
+            "PAN001_aaaaaa_20230101T000000",
+            "PAN001_bbbbbb_20230102T000000",
+        ]
+
+    def test_with_no_start_date_the_window_runs_backward_from_now(self):
+        """Forward from now there is nothing to find."""
+        table = observations_table()
+        recent = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=3)
+        table.loc[0, "sequence_time"] = recent.isoformat()
+
+        results = search_observations(source=table, duration="30 days")
+
+        assert list(results.sequence_sequence_id) == ["PAN001_aaaaaa_20230101T000000"]
+
+    def test_a_recent_window_excludes_the_old_sequences(self):
+        results = search_observations(source=observations_table(), duration="7 days")
+
+        assert len(results) == 0
 
     def test_end_date_and_duration_together_are_refused(self):
         """Both name the same edge, and nothing says which wins."""
@@ -588,15 +779,35 @@ class TestDuration:
                 duration="30 days",
             )
 
-    def test_with_no_start_date_the_window_runs_backward_from_now(self):
-        """Forward from now there is nothing to find."""
-        table = observations_table()
-        recent = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=3)
-        table.loc[0, "sequence_time"] = recent.isoformat()
+    def test_a_bad_duration_is_refused_by_the_search_too(self):
+        with pytest.raises(ValueError, match="not a duration this understands"):
+            search_observations(source=observations_table(), duration="a fortnight")
 
-        results = search_observations(source=table, duration="30 days")
+    def test_a_duration_composes_with_the_other_filters(self):
+        results = search_observations(
+            source=observations_table(),
+            start_date="2023-01-01",
+            duration="1 year",
+            min_num_usable=50,
+            query="moonfrac < 0.5",
+        )
 
-        assert list(results.sequence_sequence_id) == ["PAN001_aaaaaa_20230101T000000"]
+        assert list(results.sequence_sequence_id) == ["PAN002_cccccc_20230601T000000"]
+
+    def test_a_duration_and_a_cone_together(self):
+        results = search_observations(
+            source=observations_table(),
+            start_date="2023-01-01",
+            duration="1 year",
+            ra=10.0,
+            dec=20.0,
+            radius=1,
+        )
+
+        assert list(results.sequence_sequence_id) == [
+            "PAN001_aaaaaa_20230101T000000",
+            "PAN001_bbbbbb_20230102T000000",
+        ]
 
 
 def test_search_observations_is_keyword_only():

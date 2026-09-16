@@ -88,7 +88,9 @@
   days"`, `"6 months"`, `"10 days before and after"`, or a `timedelta`. It is
   anchored on `start_date` and runs forward, or on now and runs backward when
   there is no `start_date`. Mutually exclusive with `end_date`, since both set
-  the same edge. Also `--duration` on the `search` command. [#34][pr-34]
+  the same edge. A negative `timedelta` runs backward rather than producing a
+  window that ends before it starts. Also `--duration` on the `search` command.
+  [#34][pr-34]
 
 - `iso`, `airmass`, `moonfrac` and `moonsep` on every sequence, via
   `add_frame_facts`. `observations.parquet` has no column for any of them

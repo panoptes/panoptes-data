@@ -127,7 +127,8 @@ def parse_duration(duration: str | timedelta) -> tuple[relativedelta, str | None
 
     Accepts ``"90 days"``, ``"6 months before"``, ``"10 days before and after"``
     and a `datetime.timedelta`. The direction is `None` when the string does not
-    give one, which leaves the choice to `duration_window`.
+    give one, which leaves the choice to `duration_window`; a negative
+    `timedelta` names one, since a window cannot run backward from its start.
 
     Raises:
         ValueError: if the string is not a duration this understands. The
@@ -136,7 +137,13 @@ def parse_duration(duration: str | timedelta) -> tuple[relativedelta, str | None
             saying so.
     """
     if isinstance(duration, timedelta):
-        return relativedelta(seconds=duration.total_seconds()), None
+        # A negative timedelta is a window running backward, not one running
+        # from the anchor to before the anchor: an inverted window matches
+        # nothing, and would report an empty archive rather than a mistake.
+        seconds = duration.total_seconds()
+        if seconds < 0:
+            return relativedelta(seconds=-seconds), "backward"
+        return relativedelta(seconds=seconds), None
 
     match = DURATION_PATTERN.match(str(duration))
     if match is None:
