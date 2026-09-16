@@ -223,6 +223,39 @@
   docs build that imports the package remains its own check that the package
   imports.
 
+- The documentation is built by [Zensical] rather than Sphinx, and the sources
+  are Markdown end to end. Nothing was written in reStructuredText before --
+  `myst-parser` had been reading Markdown for a while -- but `docs/conf.py` was
+  300 lines of generated boilerplate, including a hand-rolled `sphinx-apidoc`
+  invocation working around a Read the Docs bug and a block of TODOs nobody had
+  answered. It is gone, and so is `docs/Makefile`. The site is `zensical.toml`,
+  about 80 lines, most of it the `nav`.
+
+- Every page in `docs/` is now either a snippet line or a `:::` block, so
+  nothing there is a copy. `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
+  `AUTHORS.md` and `LICENSE.txt` stay at the repository root and are included
+  from it; the API reference is `mkdocstrings` reading the docstrings, which
+  replaces the generated `docs/api/*.rst` that `.gitignore` had to exclude.
+  `docs/index.md` and `docs/readme.md` had each included `README.md`
+  separately, so the site had been serving it twice.
+
+- Docs publish to GitHub Pages only, and `.readthedocs.yaml` is gone. The
+  `gh-pages` deploy and Read the Docs had both been building the same site from
+  two configs that could disagree -- the same duplication as the dependency
+  lists. The README badge points at the Pages site, as does the
+  `Documentation` URL in `[project.urls]`, which had pointed at the PANOPTES
+  home page rather than at any documentation.
+
+- `panoptes/data/utils/` and `panoptes/data/utils/cli/` have `__init__.py`
+  files. They had been implicit namespace directories inside a regular package,
+  which resolved at runtime but is not something a static reader can follow:
+  `mkdocstrings` could not find `panoptes.data.utils.cli.main` to document the
+  CLI, and Sphinx had needed `--implicit-namespaces` for the same reason.
+  `src/panoptes/` itself stays a namespace package, as it must -- that is the
+  name shared with `panoptes-utils` and `panoptes-pipeline`.
+
+[Zensical]: https://zensical.org/
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a

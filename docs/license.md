@@ -1,5 +1,5 @@
 # License
 
-```{literalinclude} ../LICENSE.txt
-:language: text
+```text
+--8<-- "LICENSE.txt"
 ```
