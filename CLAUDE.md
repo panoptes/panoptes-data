@@ -39,8 +39,8 @@ uv run pytest --cov=panoptes.data --cov-report=term-missing
 uv run ruff check .
 uv build                      # sdist + wheel into dist/
 uv sync --group docs          # project + documentation toolchain
-uv run zensical serve         # docs with live reload
-uv run zensical build --clean # static site into site/
+uv run --group docs zensical serve          # docs with live reload
+uv run --group docs zensical build --clean # static site into site/
 ```
 
 If a sync dies on a download, raise `UV_HTTP_TIMEOUT` (default 30s) rather than

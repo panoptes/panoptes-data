@@ -42,7 +42,7 @@ jobs:
       # exist, or a `:::` block naming a module that cannot be imported, fails
       # the build rather than publishing a hole.
       - name: Build docs
-        run: uv run zensical build --clean --strict
+        run: uv run --group docs zensical build --clean --strict
 
       - name: Upload HTML docs artifact
         uses: actions/upload-artifact@v4

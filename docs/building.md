@@ -7,8 +7,8 @@ rather than working from stubs.
 
 ```bash
 uv sync --group docs
-uv run zensical serve           # live reload at http://127.0.0.1:8000
-uv run zensical build --clean   # static site into site/
+uv run --group docs zensical serve          # live reload at localhost:8000
+uv run --group docs zensical build --clean # static site into site/
 ```
 
 CI runs `zensical build --clean --strict`. `--strict` turns warnings into
