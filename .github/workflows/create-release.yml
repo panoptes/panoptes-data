@@ -26,11 +26,8 @@ jobs:
         with:
           # hatch-vcs derives the version from the tag, so it needs the history.
           fetch-depth: 0
-      # `actions/checkout` fetches the commit SHA *into* the tag ref
-      # (`+<sha>:refs/tags/<name>`), so the checkout holds a lightweight tag
-      # whatever the remote has. Re-fetching the ref restores the real tag
-      # object; without this the check below fails every annotated tag, and
-      # `%(contents)` reports the commit message rather than the tag message.
+      # `actions/checkout` fetches the commit SHA into the tag ref, so the
+      # checkout holds a lightweight tag whatever the remote has.
       - name: Restore the annotated tag object
         run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
 
@@ -56,6 +53,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install hatch
       - name: Build package with Hatch
+        id: build
         run: |
           hatch clean
           hatch build
@@ -66,6 +64,10 @@ jobs:
       - name: Create the GitHub release
         # The annotated tag message is the release notes, so what the tag says
         # and what the release says cannot drift apart.
+        #
+        # Keyed on the build rather than on the job: a release needs the tag and
+        # the dists, not a successful upload.
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -76,7 +78,16 @@ jobs:
             echo "::error::${GITHUB_REF_NAME} has an empty tag message, and the release notes come from it."
             exit 1
           fi
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
-            --notes-file notes.md \
-            dist/*
+          # Re-running the job has to be safe: `gh release create` refuses a
+          # tag that already has a release.
+          if gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
+            gh release edit "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file notes.md
+            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file notes.md \
+              dist/*
+          fi
