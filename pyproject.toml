@@ -39,7 +39,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.urls]
-Documentation = "https://projectpanoptes.org/"
+Documentation = "https://panoptes.github.io/panoptes-data/"
 Source = "https://github.com/panoptes/panoptes-data/"
 Download = "https://pypi.org/project/panoptes-data/#files"
 
@@ -61,16 +61,14 @@ packages = ["src/panoptes"]
 # blocks that duplicated these groups are gone.
 [dependency-groups]
 dev = [{ include-group = "test" }, "ruff>=0.5.0"]
-# The documentation toolchain only. The runtime dependencies autodoc needs to
-# import `panoptes.data` come from the project itself, which `uv sync` installs
-# alongside this group -- relisting them here is how `docs/requirements.txt`
-# drifted from `[project.dependencies]` until it was carrying `photutils`, which
-# nothing in this package imports.
+# The documentation toolchain only. The runtime dependencies `mkdocstrings`
+# needs to import `panoptes.data` come from the project itself, which `uv sync`
+# installs alongside this group -- relisting them here is how
+# `docs/requirements.txt` drifted from `[project.dependencies]` until it was
+# carrying `photutils`, which nothing in this package imports.
 docs = [
-    "linkify-it-py",
-    "myst-parser",
-    "pydata-sphinx-theme",
-    "sphinx>=3.2.1",
+    "mkdocstrings[python]",
+    "zensical",
 ]
 test = [
     "coverage>=7.0,<8.0",
@@ -83,10 +81,10 @@ test = [
 line-length = 100
 target-version = "py312"
 src = ["src"]
-# Notebooks are exploratory and re-running one re-dirties it; `docs/conf.py` is
-# Sphinx boilerplate. Linting them produces churn nobody acts on, so
-# `ruff check .` covers the code people actually edit.
-extend-exclude = ["notebooks", "docs/conf.py"]
+# Notebooks are exploratory and re-running one re-dirties it. Linting them
+# produces churn nobody acts on, so `ruff check .` covers the code people
+# actually edit.
+extend-exclude = ["notebooks"]
 
 [tool.ruff.lint]
 # The set `panoptes-pipeline` uses: pycodestyle errors, pyflakes, import

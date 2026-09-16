@@ -1,4 +1,4 @@
-[![Documentation Status](https://readthedocs.org/projects/panoptes-data/badge/?version=latest)](https://panoptes-data.readthedocs.io/en/latest/?badge=latest)
+[![Documentation](https://github.com/panoptes/panoptes-data/actions/workflows/docs.yml/badge.svg)](https://panoptes.github.io/panoptes-data/)
 
 # PANOPTES Data tools
 
