@@ -3,12 +3,12 @@ from pathlib import Path
 import pandas as pd
 import typer
 from astropy.time import Time
+from panoptes.utils.time import current_time, flatten_time
 from rich import print
 from tqdm import tqdm
 
 from panoptes.data.observations import IMAGES_UNAVAILABLE_MESSAGE, ObservationInfo
 from panoptes.data.search import search_observations
-from panoptes.utils.time import current_time, flatten_time
 
 app = typer.Typer(pretty_exceptions_enable=False)
 

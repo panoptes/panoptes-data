@@ -68,7 +68,9 @@ class TestReadObservation:
         assert observation['sequence_camera_serial_number'] == '032071000633'
 
     def test_a_sequence_not_in_the_tree_says_so(self, processed_root):
-        with pytest.raises(documents.DocumentsUnavailableError, match='PAN001_abc123_20200101T000000'):
+        with pytest.raises(
+            documents.DocumentsUnavailableError, match='PAN001_abc123_20200101T000000'
+        ):
             documents.read_observation(processed_root, 'PAN001_abc123_20200101T000000')
 
     def test_a_sequence_the_pipeline_has_not_aggregated_says_so(self, tmp_path, frames):

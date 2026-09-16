@@ -5,12 +5,12 @@ import numpy as np
 import pandas as pd
 from astropy.coordinates import SkyCoord
 from dateutil.parser import parse as parse_date
+from panoptes.utils.time import current_time
+from panoptes.utils.utils import listify
 
 from panoptes.data import documents
 from panoptes.data.observations import ObservationInfo
 from panoptes.data.settings import SurveySettings
-from panoptes.utils.time import current_time
-from panoptes.utils.utils import listify
 
 logger = logging.getLogger()
 

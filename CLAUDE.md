@@ -21,39 +21,44 @@ the sibling repositories do.
 
 ## Commands
 
-Everything goes through `uv`. It picks a 3.12 interpreter on its own; the
-system `python3` here is 3.11, so a bare `pip install -e .` fails on
-`requires-python`.
+Everything goes through `uv`. `requires-python` is `>=3.12`, and `uv` resolves
+a matching interpreter on its own — a bare `pip install -e .` against an older
+default `python3` fails before it installs anything.
 
 ```bash
-uv sync --group test          # project + pytest, coverage, doctestplus
-uv run pytest -q              # 113 tests, ~6s, no network or fixture data needed
+uv sync --group dev           # project + test group + ruff
+uv run pytest -q              # whole suite; needs no network and no fixture data
 uv run pytest tests/test_search.py::TestAddPointing -q
 uv run pytest -k pointing -q
 uv run pytest --cov=panoptes.data --cov-report=term-missing
+uv run ruff check .
+uv build                      # sdist + wheel into dist/
 ```
 
 If a sync dies on a download, raise `UV_HTTP_TIMEOUT` (default 30s) rather than
 retrying blindly.
 
-`pyproject.toml` also declares `hatch` envs and scripts. They work, but `uv` is
-the path everything else in the fleet uses; prefer it.
+`hatchling` is the build backend and `hatch-vcs` derives the version from the
+git tag, so the `[build-system]`, `[tool.hatch.version]` and
+`[tool.hatch.build*]` blocks are load-bearing. There are no `hatch` *envs*:
+development goes through `uv` and `[dependency-groups]`, as it does everywhere
+else in the fleet. Don't reintroduce a second way to run the tests.
 
-### Linting, and why it is not clean
+### Linting
 
-```bash
-uv run --with 'ruff>=0.5.0' ruff check src/panoptes/data/<file you touched>.py
-```
+**`uv run ruff check .` passes before anything is committed.** The rule set is
+pinned in `[tool.ruff.lint]` — `E`, `F`, `I`, `UP`, matching
+`panoptes-pipeline` — precisely so that "clean" means the same thing on every
+machine and across ruff releases; ruff's own defaults move, and an unpinned
+config makes each upgrade look like a regression. `notebooks/` and
+`docs/conf.py` are excluded: re-running a notebook re-dirties it, and nobody
+acts on the churn.
 
-`ruff check .` currently reports ~20 findings across `src/`, `docs/conf.py`
-and `notebooks/` — unsorted imports, `BLE001`, `C408`, a `UP036` version block
-in `__init__.py`. Unlike `panoptes-pipeline`, this repo is **not** clean, so an
-error you see is probably not one you introduced. Lint the files you touched
-and leave the rest; a repo-wide cleanup is its own PR.
-
-**Do not run `ruff format .`** casually. `pyproject.toml` sets no
-`quote-style`, the codebase is single-quoted throughout, and the formatter's
-default would rewrite 13 files. That is a decision, not a chore.
+**Never run `ruff format .` as part of another change.** `pyproject.toml` sets
+no `quote-style` and the codebase is single-quoted throughout, so the
+formatter's double-quote default would rewrite most of it. Whether to adopt
+that style is a question for a human, and a format-only change belongs in its
+own commit either way.
 
 ## Architecture
 
@@ -129,11 +134,11 @@ not from any URL field.
   return nothing.
 - **There is no cloud path and no fallback.** The Firestore-derived
   `observations.csv` and the `get-observation-info` function are gone because
-  nothing produces them (#15), and archived frames 404 anonymously in every
-  era of the bucket (#17) — so `download_images` and the `download` CLI command
+  nothing produces them (panoptes/panoptes-data#15), and archived frames 404 anonymously in every
+  era of the bucket (panoptes/panoptes-data#17) — so `download_images` and the `download` CLI command
   raise rather than returning an empty list. Do not reintroduce either.
 - Parquet over CSV is load-bearing: dtypes live in the file, so a serial like
-  `032071000633` comes back a string instead of `3.207100e+10` (#13).
+  `032071000633` comes back a string instead of `3.207100e+10` (panoptes/panoptes-data#13).
 
 ## Tests
 
@@ -157,6 +162,19 @@ A test written for a fixed bug should be run against the unfixed code first
 
 - **American English** in code, comments, docstrings, commits and the
   changelog.
+- **Branch names say what the branch is for**: `type/issue-NNN` plus an
+  optional short description — `fix/issue-18`, `docs/issue-24-contract-notes`,
+  `cleanup/issue-19-ruff-config`. The type is the kind of work (`fix`,
+  `cleanup`, `docs`, `search`, `release`); the issue number is what makes the
+  branch findable a year later, when the diff is the only thing left explaining
+  itself. Name a batch for its parent issue, not for one of its children, and
+  branch from `main` — it is the only long-lived branch.
+
+  A generated name carrying neither — the `claude/adjective-surname-hex` an
+  agent session is handed by default — is **not** one. Rename it before the
+  first push; renaming after the push means force-pushing or reopening the PR.
+  With no issue to point at, still say what the work is: `cleanup/ruff-config`
+  beats `claude/amazing-newton-fmbd97`.
 - **`CHANGELOG.md` is updated in the branch that makes the change**, under
   `## Unreleased`, with [Keep a Changelog] headings. No entry for changes
   nobody outside the branch can observe.

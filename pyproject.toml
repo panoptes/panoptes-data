@@ -55,22 +55,12 @@ include = ["src/panoptes/**", "README.md", "LICENSE.txt"]
 [tool.hatch.build.targets.wheel]
 packages = ["src/panoptes"]
 
-[tool.hatch.envs.default]
-dependencies = [
-    "ruff>=0.5.0"
-]
-[tool.hatch.envs.default.scripts]
-lint = "ruff check ."
-lint-fix = "ruff check --fix ."
-fmt = "ruff format ."
-fmt-check = "ruff format --check ."
-
-[tool.ruff]
-line-length = 100
-target-version = "py312"
-src = ["src"]
-
+# Development environments are `uv`'s, not `hatch`'s. `hatchling` remains the
+# build backend and `hatch-vcs` still derives the version from the git tag --
+# those are how the package builds at all -- but the `[tool.hatch.envs.*]`
+# blocks that duplicated these groups are gone.
 [dependency-groups]
+dev = [{ include-group = "test" }, "ruff>=0.5.0"]
 test = [
     "coverage>=7.0,<8.0",
     "pytest>=7.0,<8.0",
@@ -78,13 +68,18 @@ test = [
     "pytest-doctestplus>=1.0,<2.0",
 ]
 
-[tool.hatch.envs.tests]
-dependencies = [
-    "coverage>=7.0,<8.0",
-    "pytest>=7.0,<8.0",
-    "pytest-cov>=4.0,<5.0",
-    "pytest-doctestplus>=1.0,<2.0",
-]
-[tool.hatch.envs.tests.scripts]
-test = "pytest"
-test-cov = "pytest --cov=panoptes.data --cov-report term-missing --verbose"
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+# Notebooks are exploratory and re-running one re-dirties it; `docs/conf.py` is
+# Sphinx boilerplate. Linting them produces churn nobody acts on, so
+# `ruff check .` covers the code people actually edit.
+extend-exclude = ["notebooks", "docs/conf.py"]
+
+[tool.ruff.lint]
+# The set `panoptes-pipeline` uses: pycodestyle errors, pyflakes, import
+# sorting, pyupgrade. Selecting it explicitly is the point -- the default set
+# moves between ruff versions, so an unpinned config makes "clean" mean
+# something different on every machine.
+select = ["E", "F", "I", "UP"]

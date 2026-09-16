@@ -5,11 +5,11 @@ from pathlib import Path
 import pandas as pd
 from astropy.nddata import CCDData, Cutout2D
 from astropy.wcs import FITSFixedWarning
+from panoptes.utils.images import fits as fits_utils
+from panoptes.utils.images.fits import ImagePathInfo
 
 from panoptes.data import documents
 from panoptes.data.settings import ImageStatus, SurveySettings
-from panoptes.utils.images import fits as fits_utils
-from panoptes.utils.images.fits import ImagePathInfo
 
 warnings.filterwarnings('ignore', category=FITSFixedWarning)
 
