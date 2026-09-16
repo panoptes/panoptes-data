@@ -42,9 +42,9 @@ coverage.xml
 build/*
 dist/*
 sdist/*
-docs/api/*
-docs/_rst/*
-docs/_build/*
+site/
+# `zensical build` writes an incremental cache beside the config.
+.cache/
 cover/*
 MANIFEST
 

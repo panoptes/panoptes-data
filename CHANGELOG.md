@@ -201,6 +201,64 @@
   half, and it fails on a schedule rather than in a user's environment. It can
   also be run on demand.
 
+- The documentation builds from `pyproject.toml`, and `docs/requirements.txt`
+  is gone. That file listed the Sphinx toolchain and then hand-copied the
+  runtime dependencies beside it, so `[project.dependencies]` and the docs
+  build were two lists that had to agree with nothing enforcing it -- and they
+  had already stopped agreeing: it carried `photutils`, which nothing in this
+  package imports. The toolchain is now the `docs` dependency group, and the
+  runtime dependencies come from the project, which `uv sync` installs with
+  the group. It is the same fix as dropping the hatch envs, applied to the one
+  path still on `pip`.
+
+- `.github/workflows/docs.yml` installs with `uv sync --locked --group docs`,
+  matching the test workflow, and builds the site from `pyproject.toml` and the
+  lockfile rather than a requirements file. (It built with Sphinx through
+  `make html` when that change was made, and Read the Docs ran the same
+  commands; the entry below replaces both.)
+
+- The docs workflow no longer runs the test suite. Its `test` job was a second
+  copy of the one in `tests.yml` -- same suite, same coverage flags, same
+  `coverage-xml` artifact name, same triggers -- so every push ran the tests
+  twice and a failure reported twice. The docs job no longer needs it, and a
+  docs build that imports the package remains its own check that the package
+  imports.
+
+- The documentation is built by [Zensical] rather than Sphinx, and the sources
+  are Markdown end to end. Nothing was written in reStructuredText before --
+  `myst-parser` had been reading Markdown for a while -- but `docs/conf.py` was
+  300 lines of generated boilerplate, including a hand-rolled `sphinx-apidoc`
+  invocation working around a Read the Docs bug and a block of TODOs nobody had
+  answered. It is gone, and so is `docs/Makefile`. The site is `zensical.toml`,
+  about 80 lines, most of it the `nav`.
+
+- Every page in `docs/` now carries a snippet line or a `:::` block and little
+  else -- a heading, at most a sentence -- so nothing there is a copy. The
+  exception is `docs/building.md`, which is prose about the documentation build
+  and has nowhere else to live. `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
+  `AUTHORS.md` and `LICENSE.txt` stay at the repository root and are included
+  from it; the API reference is `mkdocstrings` reading the docstrings, which
+  replaces the generated `docs/api/*.rst` that `.gitignore` had to exclude.
+  `docs/index.md` and `docs/readme.md` had each included `README.md`
+  separately, so the site had been serving it twice.
+
+- Docs publish to GitHub Pages only, and `.readthedocs.yaml` is gone. The
+  `gh-pages` deploy and Read the Docs had both been building the same site from
+  two configs that could disagree -- the same duplication as the dependency
+  lists. The README badge points at the Pages site, as does the
+  `Documentation` URL in `[project.urls]`, which had pointed at the PANOPTES
+  home page rather than at any documentation.
+
+- `panoptes/data/utils/` and `panoptes/data/utils/cli/` have `__init__.py`
+  files. They had been implicit namespace directories inside a regular package,
+  which resolved at runtime but is not something a static reader can follow:
+  `mkdocstrings` could not find `panoptes.data.utils.cli.main` to document the
+  CLI, and Sphinx had needed `--implicit-namespaces` for the same reason.
+  `src/panoptes/` itself stays a namespace package, as it must -- that is the
+  name shared with `panoptes-utils` and `panoptes-pipeline`.
+
+[Zensical]: https://zensical.org/
+
 - Docstrings parse cleanly. `griffe` -- which is what `mkdocstrings` reads --
   had twelve complaints, and each was a real ambiguity rather than a style
   preference. Five parameters and two return values had neither a type in the

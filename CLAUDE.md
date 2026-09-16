@@ -38,6 +38,9 @@ uv run pytest -k pointing -q
 uv run pytest --cov=panoptes.data --cov-report=term-missing
 uv run ruff check .
 uv build                      # sdist + wheel into dist/
+uv sync --group docs          # project + documentation toolchain
+uv run --group docs zensical serve          # docs with live reload
+uv run --group docs zensical build --clean # static site into site/
 ```
 
 If a sync dies on a download, raise `UV_HTTP_TIMEOUT` (default 30s) rather than
@@ -51,10 +54,23 @@ local development, the lint job and the test job go through `uv` and
 second way to install the test dependencies — that is what the hatch envs were,
 a hand-copy of the `test` group that could drift from it.
 
-The one path still on `pip` is the docs workflow, which installs
-`docs/requirements.txt`. That file hand-copies the runtime dependencies and is
-the same drift waiting to happen; migrating it is unfinished work, not a
-design.
+The docs build goes through `uv` too: `uv sync --locked --group docs`, then
+`zensical build --clean --strict`. The `docs` group holds the documentation
+toolchain and nothing else — the runtime dependencies `mkdocstrings` reads come
+from the project, which `uv sync` installs with the group. There is no
+`docs/requirements.txt`; it hand-copied `[project.dependencies]` and had
+already drifted from it. A package the docs need belongs in
+`[project.dependencies]`, never in a second list.
+
+The site is `zensical.toml` plus `docs/`, and every page there is either a
+snippet line including a root file or a `:::` block naming a module. **Don't
+write prose into `docs/`** — it belongs in a docstring or in a root Markdown
+file, or it becomes the next thing to keep in step by hand. The one exception
+is `docs/building.md`, which is about the site itself.
+
+Docs publish to GitHub Pages only. Read the Docs is gone: it was a second
+build, from a second config, of the same site the `gh-pages` deploy was already
+publishing.
 
 ### Linting
 
@@ -62,9 +78,8 @@ design.
 pinned in `[tool.ruff.lint]` — `E`, `F`, `I`, `UP`, matching
 `panoptes-pipeline` — precisely so that "clean" means the same thing on every
 machine and across ruff releases; ruff's own defaults move, and an unpinned
-config makes each upgrade look like a regression. `notebooks/` and
-`docs/conf.py` are excluded: re-running a notebook re-dirties it, and nobody
-acts on the churn.
+config makes each upgrade look like a regression. `notebooks/` is excluded:
+re-running a notebook re-dirties it, and nobody acts on the churn.
 
 **`uv run ruff format .` passes too.** Double quotes, ruff's default, matching
 `panoptes-pipeline`. Let the formatter decide: don't hand-wrap a line shorter
