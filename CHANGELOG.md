@@ -79,6 +79,12 @@
   is not `min_num_frames` -- one 372-frame sequence in the archive has 310
   usable. [#14][issue-14], [#34][pr-34]
 
+- `search_observations` takes a `duration` in place of an `end_date`: `"90
+  days"`, `"6 months"`, `"10 days before and after"`, or a `timedelta`. It is
+  anchored on `start_date` and runs forward, or on now and runs backward when
+  there is no `start_date`. Mutually exclusive with `end_date`, since both set
+  the same edge. Also `--duration` on the `search` command. [#34][pr-34]
+
 - `iso`, `airmass`, `moonfrac` and `moonsep` on every sequence, via
   `add_frame_facts`. `observations.parquet` has no column for any of them
   because each is a per-frame reading, so each is reduced to its sequence mean.
@@ -150,7 +156,8 @@
 - The `search` and `get-metadata` CLI commands no longer bind one short flag to
   two options. `-s` was `--start-date` *and* `--end-date`, so `-s 2024-01-01`
   set the end date; `-r` was `--ra` *and* `--radius`. `--end-date` takes `-e`,
-  `--ra` is long-form only, and `--sequence-id` takes `-i`. [#34][pr-34]
+  `--ra` is long-form only, `--sequence-id` takes `-i`, and `--min-duration`
+  takes `-L` so `-D` can be `--duration`. [#34][pr-34]
 
 - `read_frames` applies the contract's dropped blocks and reindexes to its
   required columns, so reading documents directly and reading `frames.parquet`

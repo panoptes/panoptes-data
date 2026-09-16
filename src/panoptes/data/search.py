@@ -1,11 +1,14 @@
 import logging
+import re
 from datetime import datetime as dt
+from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from astropy.coordinates import SkyCoord
 from dateutil.parser import parse as parse_date
+from dateutil.relativedelta import relativedelta
 from panoptes.utils.time import current_time
 from panoptes.utils.utils import listify
 
@@ -83,6 +86,101 @@ SIMULTANEOUS_COLUMNS = (
     "num_frames",
     "num_usable",
 )
+
+
+#: A `duration`: how many of which unit, and which side of the anchor date the
+#: window falls on. Months and years are calendar spans rather than fixed
+#: multiples of a day, so they are applied with `relativedelta` -- "6 months
+#: after 2024-03-12" is 2024-09-12, not 2024-03-12 plus 182.6 days.
+DURATION_PATTERN = re.compile(
+    r"""^\s*
+        (?P<count>\d+)\s*
+        (?P<unit>hour|day|week|month|year)s?
+        (?:\s+(?P<direction>
+            before\s+and\s+after | either\s+side\s+of | either\s+side
+            | before | ago | after | ahead | forwards? | backwards?
+        ))?
+    \s*$""",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+#: What each direction word does to the anchor. `None` means "read it off the
+#: anchor", which `duration_window` resolves.
+DURATION_DIRECTIONS = {
+    "before and after": "both",
+    "either side": "both",
+    "either side of": "both",
+    "before": "backward",
+    "ago": "backward",
+    "backward": "backward",
+    "backwards": "backward",
+    "after": "forward",
+    "ahead": "forward",
+    "forward": "forward",
+    "forwards": "forward",
+}
+
+
+def parse_duration(duration: str | timedelta) -> tuple[relativedelta, str | None]:
+    """A `duration` as a span and the direction it runs, if it says.
+
+    Accepts ``"90 days"``, ``"6 months before"``, ``"10 days before and after"``
+    and a `datetime.timedelta`. The direction is `None` when the string does not
+    give one, which leaves the choice to `duration_window`.
+
+    Raises:
+        ValueError: if the string is not a duration this understands. The
+            message lists the forms that work, because a duration that silently
+            parsed as something else would move the search window without
+            saying so.
+    """
+    if isinstance(duration, timedelta):
+        return relativedelta(seconds=duration.total_seconds()), None
+
+    match = DURATION_PATTERN.match(str(duration))
+    if match is None:
+        raise ValueError(
+            f"{duration!r} is not a duration this understands. Write a whole "
+            f"number of hours, days, weeks, months or years, optionally saying "
+            f"which way it runs: '90 days', '6 months before', "
+            f"'10 days before and after', '3 weeks after'."
+        )
+
+    count = int(match["count"])
+    unit = match["unit"].lower()
+    written = match["direction"]
+    direction = DURATION_DIRECTIONS[" ".join(written.lower().split())] if written else None
+
+    return relativedelta(**{f"{unit}s": count}), direction
+
+
+def duration_window(
+    duration: str | timedelta, anchor: pd.Timestamp, default: str
+) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """The ``(start, end)`` a `duration` marks out around `anchor`.
+
+    `default` is the direction to use when the duration does not name one. A
+    duration anchored on a `start_date` runs forward from it; one with no
+    `start_date` is anchored on now and runs backward, because a window in the
+    future holds no observations.
+
+    ``"10 days before and after"`` is why this returns a pair rather than an end
+    date: a window can sit on both sides of its anchor, and no single parsed
+    datetime can say so.
+    """
+    span, direction = parse_duration(duration)
+    direction = direction or default
+
+    if direction == "both":
+        return anchor - span, anchor + span
+    if direction == "backward":
+        return anchor - span, anchor
+    return anchor, anchor + span
+
+
+def as_utc(value) -> pd.Timestamp:
+    """Any date this module accepts, as a UTC timestamp."""
+    return pd.to_datetime(parse_date(str(value)), utc=True)
 
 
 def wrap_degrees(angle):
@@ -338,6 +436,7 @@ def search_observations(
     unit_id=None,
     start_date=None,
     end_date=None,
+    duration=None,
     ra=None,
     dec=None,
     radius=10,  # degrees
@@ -396,7 +495,21 @@ def search_observations(
         start_date (str|`datetime.datetime`|None): A valid datetime instance or `None` (default).
             If `None` then the beginning of the current year is used as a start date.
         end_date (str|`datetime.datetime`|None): A valid datetime instance or `None` (default).
-            If `None` then today is used.
+            If `None` then today is used. Mutually exclusive with `duration`.
+        duration (str|`datetime.timedelta`|None): The length of the window,
+            instead of naming its far end: ``'90 days'``, ``'6 months'``,
+            ``'3 weeks after'``, ``'10 days before and after'``.
+
+            The window is anchored on `start_date` and runs forward from it. With
+            no `start_date` it is anchored on now and runs backward, because a
+            window in the future holds no observations -- so ``duration='90
+            days'`` on its own is the last 90 days. A duration that says which
+            way it runs overrides both.
+
+            ``'before and after'`` puts the window on both sides of the anchor,
+            which is why this is a duration rather than a parsed end date: one
+            datetime cannot express a two-sided window. Months and years are
+            calendar spans, so ``'6 months'`` from March 12 ends September 12.
         unit_id (str|list|None): A str or list of strs of unit_ids to include.
             Default `None` will include all.
         min_num_frames (int): Minimum number of frames the observation should
@@ -430,8 +543,10 @@ def search_observations(
         `pandas.DataFrame`: A table with the matching observation results.
 
     Raises:
-        ValueError: if exactly one of `ra` and `dec` is given, or if `query` is
-            not a valid query over the result's columns.
+        ValueError: if exactly one of `ra` and `dec` is given, if both
+            `end_date` and `duration` are given, if `duration` is not a
+            duration this understands, or if `query` is not a valid query over
+            the result's columns.
     """
     logger.debug("Setting up search params")
 
@@ -449,14 +564,24 @@ def search_observations(
         elif ra is not None:
             coords = SkyCoord(ra=ra, dec=dec, unit="degree")
 
-    if start_date is None:
-        start_date = f"{dt.today().year}-01-01"
-
-    if end_date is None:
-        end_date = current_time()
-
-    start_date = pd.to_datetime(parse_date(str(start_date)), utc=True)
-    end_date = pd.to_datetime(parse_date(str(end_date)), utc=True)
+    if duration is not None:
+        if end_date is not None:
+            # Both would describe the same edge of the window, and nothing says
+            # which one wins. Naming the far end and naming the length are two
+            # ways to ask the same question, so take one.
+            raise ValueError(
+                f"`end_date` and `duration` both set the end of the window; got "
+                f"end_date={end_date!r}, duration={duration!r}. Give one."
+            )
+        # No `start_date` means the anchor is now, and the window runs backward:
+        # forward from now there is nothing to find.
+        anchor = as_utc(start_date) if start_date is not None else as_utc(current_time())
+        start_date, end_date = duration_window(
+            duration, anchor, "forward" if start_date is not None else "backward"
+        )
+    else:
+        start_date = as_utc(start_date if start_date is not None else f"{dt.today().year}-01-01")
+        end_date = as_utc(end_date if end_date is not None else current_time())
 
     # Never mutate the caller's table: the previous version ran
     # `query(..., inplace=True)` on whatever `source` was handed in.

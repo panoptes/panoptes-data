@@ -195,6 +195,14 @@ not from any URL field.
   (panoptes/panoptes-data#14). Half a position — one of `ra`/`dec` — is an
   error, not a request for everything; a cone wide enough to be the whole sky
   is not how to ask for everything either.
+- **`duration` and `end_date` are exclusive, and a duration can face both
+  ways.** `'10 days before and after'` is why `duration_window` returns a pair
+  rather than an end date: a window can straddle its anchor, and no single
+  parsed datetime says so. (`dateparser` reads that phrase as `'10 days after'`
+  and returns one date, silently.) Anchored on `start_date` it runs forward; with
+  no `start_date` it is anchored on now and runs backward, because forward from
+  now there is nothing to find. Months and years go through `relativedelta`, so
+  they stay calendar spans.
 - **The frame facts are means with no spread, unlike pointing.** `iso`,
   `airmass`, `moonfrac` and `moonsep` are per-frame readings `observations.parquet`
   has no column for, so `add_frame_facts` reduces them in the same pass that

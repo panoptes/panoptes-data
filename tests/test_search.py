@@ -10,8 +10,11 @@ from panoptes.data.search import (
     MetadataUnavailableError,
     add_frame_facts,
     add_pointing,
+    as_utc,
+    duration_window,
     find_simultaneous,
     get_all_observations,
+    parse_duration,
     search_observations,
 )
 
@@ -510,6 +513,90 @@ class TestAddFrameFacts:
         assert result.airmass == pytest.approx(1.2)
         assert result.moonfrac == pytest.approx(0.3)
         assert result.moonsep == pytest.approx(60.0)
+
+
+class TestDuration:
+    """A window given as a length rather than a far end."""
+
+    ANCHOR = "3/12/2024"
+
+    def window(self, duration, default="forward"):
+        start, end = duration_window(duration, as_utc(self.ANCHOR), default)
+        return str(start.date()), str(end.date())
+
+    def test_a_bare_duration_runs_from_the_anchor(self):
+        assert self.window("90 days") == ("2024-03-12", "2024-06-10")
+
+    def test_before_and_after_puts_the_window_on_both_sides(self):
+        """The case a single parsed datetime cannot express."""
+        assert self.window("10 days before and after") == ("2024-03-02", "2024-03-22")
+        assert self.window("1 year either side of") == ("2023-03-12", "2025-03-12")
+
+    def test_a_direction_word_overrides_the_default(self):
+        assert self.window("2 weeks before") == ("2024-02-27", "2024-03-12")
+        assert self.window("3 weeks after", default="backward") == ("2024-03-12", "2024-04-02")
+
+    def test_the_default_applies_when_the_duration_is_silent(self):
+        assert self.window("6 months", default="backward") == ("2023-09-12", "2024-03-12")
+
+    def test_months_and_years_are_calendar_spans(self):
+        """Six months from March 12 is September 12, not 182.6 days later."""
+        assert self.window("6 months") == ("2024-03-12", "2024-09-12")
+        assert self.window("1 year") == ("2024-03-12", "2025-03-12")
+
+    def test_a_timedelta_is_taken_as_given(self):
+        from datetime import timedelta
+
+        assert self.window(timedelta(days=30)) == ("2024-03-12", "2024-04-11")
+
+    def test_hours_are_a_unit(self):
+        assert self.window("48 hours") == ("2024-03-12", "2024-03-14")
+
+    def test_an_unreadable_duration_lists_the_forms_that_work(self):
+        with pytest.raises(ValueError, match="not a duration this understands"):
+            parse_duration("a fortnight")
+        with pytest.raises(ValueError, match="not a duration this understands"):
+            parse_duration("90 parsecs")
+
+    def test_a_search_window_from_a_duration(self):
+        results = search_observations(
+            source=observations_table(), start_date="2023-01-01", duration="30 days"
+        )
+
+        assert list(results.sequence_sequence_id) == [
+            "PAN001_aaaaaa_20230101T000000",
+            "PAN001_bbbbbb_20230102T000000",
+        ]
+
+    def test_a_two_sided_search_window(self):
+        """Anchored on 2023-06-01, ten days either way keeps only the June sequence."""
+        results = search_observations(
+            source=observations_table(),
+            start_date="2023-06-01",
+            duration="10 days before and after",
+        )
+
+        assert list(results.sequence_sequence_id) == ["PAN002_cccccc_20230601T000000"]
+
+    def test_end_date_and_duration_together_are_refused(self):
+        """Both name the same edge, and nothing says which wins."""
+        with pytest.raises(ValueError, match="Give one"):
+            search_observations(
+                source=observations_table(),
+                start_date="2023-01-01",
+                end_date="2023-12-31",
+                duration="30 days",
+            )
+
+    def test_with_no_start_date_the_window_runs_backward_from_now(self):
+        """Forward from now there is nothing to find."""
+        table = observations_table()
+        recent = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=3)
+        table.loc[0, "sequence_time"] = recent.isoformat()
+
+        results = search_observations(source=table, duration="30 days")
+
+        assert list(results.sequence_sequence_id) == ["PAN001_aaaaaa_20230101T000000"]
 
 
 class TestAllSkySearch:

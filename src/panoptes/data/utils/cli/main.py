@@ -144,6 +144,13 @@ def search(
     end_date: str = typer.Option(
         None, "--end-date", "-e", help="End date for the search, defaults to now."
     ),
+    duration: str = typer.Option(
+        None,
+        "--duration",
+        "-D",
+        help="Window length instead of an end date, e.g. '90 days', "
+        "'6 months', '10 days before and after'. Not with --end-date.",
+    ),
     ra: float = typer.Option(None, "--ra", help="RA in degrees for search."),
     dec: float = typer.Option(None, "--dec", "-d", help="Dec in degrees for search."),
     radius: float = typer.Option(10, "--radius", "-r", help="Radius in degrees for search."),
@@ -162,7 +169,7 @@ def search(
     min_duration_minutes: float = typer.Option(
         None,
         "--min-duration",
-        "-D",
+        "-L",
         help="Minimum wall-clock span of the observation, in minutes.",
     ),
     query: str = typer.Option(
@@ -176,22 +183,33 @@ def search(
 
     With no position the search is all-sky, so a unit and a date range, or a
     frame count and a duration, are each a complete query on their own.
+
+    A window can be given as --duration instead of --end-date: "90 days" from
+    the start date, or "10 days before and after" it. With no --start-date a
+    duration runs backward from now.
     """
-    results = search_observations(
-        unit_id=unit_id,
-        field_name=field_name,
-        camera_id=camera_id,
-        start_date=start_date,
-        end_date=end_date,
-        by_name=name,
-        ra=ra,
-        dec=dec,
-        min_num_frames=min_num_frames,
-        min_num_usable=min_num_usable,
-        min_duration_minutes=min_duration_minutes,
-        query=query,
-        radius=radius,
-    )
+    try:
+        results = search_observations(
+            unit_id=unit_id,
+            field_name=field_name,
+            camera_id=camera_id,
+            start_date=start_date,
+            end_date=end_date,
+            duration=duration,
+            by_name=name,
+            ra=ra,
+            dec=dec,
+            min_num_frames=min_num_frames,
+            min_num_usable=min_num_usable,
+            min_duration_minutes=min_duration_minutes,
+            query=query,
+            radius=radius,
+        )
+    except ValueError as e:
+        # A bad duration or a half-given position is a usage mistake, and its
+        # message already says what to write instead.
+        print(f"[red]{e}")
+        raise typer.Exit(code=1) from e
 
     if len(results) == 0:
         print("[red]No results found.")

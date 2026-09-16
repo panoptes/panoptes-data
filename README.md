@@ -102,6 +102,22 @@ benchmarks = search_observations(
 )
 ```
 
+A window can be given as a length instead of a far end, which is the other way
+people describe a time frame:
+
+```py
+# The 90 days after a date, the 90 days before now, and ten days either side.
+search_observations(start_date="2024-03-12", duration="90 days")
+search_observations(duration="90 days")
+search_observations(start_date="2024-03-12", duration="10 days before and after")
+```
+
+`duration` is anchored on `start_date` and runs forward from it; with no
+`start_date` it is anchored on now and runs backward, because a window in the
+future holds no observations. It is mutually exclusive with `end_date` -- both
+set the same edge. Months and years are calendar spans, so `"6 months"` from
+March 12 ends September 12.
+
 `min_num_usable` is not `min_num_frames`: one 372-frame sequence in the archive
 has 310 usable frames and 62 errors, and only the first filter tells them apart.
 `iso`, `airmass`, `moonfrac` and `moonsep` are per-frame header readings that
