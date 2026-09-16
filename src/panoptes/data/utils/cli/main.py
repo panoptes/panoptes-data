@@ -101,16 +101,31 @@ def get_metadata(
             )
 
             dfs = list()
+            failed = list()
             for idx, rec in (pbar := tqdm(results_df.iterrows(), total=len(results_df))):
+                sequence_id = rec['sequence_sequence_id']
                 try:
-                    pbar.set_description(f'Getting metadata for {rec["sequence_sequence_id"]}')
+                    pbar.set_description(f'Getting metadata for {sequence_id}')
                     dfs.append(ObservationInfo(meta=rec).image_metadata)
                 except Exception as e:
-                    pbar.write(f'Error in {idx} {rec["sequence_sequence_id"]}: {e!r}')
+                    pbar.write(f'Error in {idx} {sequence_id}: {e!r}')
+                    failed.append(sequence_id)
+
+            # A partial export is indistinguishable from a complete one once it
+            # is a file on disk, so it is not written at all. Reporting the
+            # count and exiting non-zero is the whole point.
+            if failed:
+                print(f'[red]{len(failed)} of {len(results_df)} sequences could not be '
+                      f'read, so no metadata file was written. First failures: '
+                      f'{failed[:5]}')
+                raise typer.Exit(code=1)
 
             pd.concat(dfs).to_csv(output_fn)
 
-        except ValueError as e:
+        except (ValueError, FileNotFoundError) as e:
+            # `DocumentsUnavailableError` is a `FileNotFoundError`: an
+            # unconfigured or mistyped root is a configuration mistake and
+            # deserves its message, not a traceback.
             print(f'[red]Error downloading metadata for {unit_id}: {e}')
             raise typer.Exit(code=1) from e
 

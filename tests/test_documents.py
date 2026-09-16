@@ -104,6 +104,38 @@ class TestReadFrames:
 
         assert list(table.sequence_camera_serial_number) == ['032071000633'] * 2
 
+    def test_the_dropped_block_does_not_become_columns(self, processed_root):
+        """The index drops `image.params`; keeping it invents columns it lacks."""
+        table = documents.read_frames(processed_root, SEQUENCE_ID)
+
+        assert not [c for c in table.columns if c.startswith('image_params_')
+                    and c != 'image_params_fingerprint']
+        # The fingerprint survives: it is the part with meaning.
+        assert 'image_params_fingerprint' in table.columns
+
+    def test_a_field_no_document_supplies_is_still_a_column(self, tmp_path):
+        """Unioning keys cannot see a field absent from every document."""
+        older = frame_document(image_time='20180824T040118')
+        del older['sequence']['camera']['serial_number']
+        del older['image']['camera']['serial_number']
+        root = tmp_path / 'processed'
+        write_sequence(root, [older])
+
+        table = documents.read_frames(root, SEQUENCE_ID)
+
+        assert 'sequence_camera_serial_number' in table.columns
+        assert table.sequence_camera_serial_number.isna().all()
+
+    def test_a_frame_the_observation_counts_but_the_tree_lacks(self, tmp_path, frames):
+        """A glob sees only what exists; the observation document says what should."""
+        root = tmp_path / 'processed'
+        write_sequence(root, frames)
+        # The observation document still counts two.
+        (root / 'PAN012/358d0f/20180824T035917/20180824T040248/metadata.json').unlink()
+
+        with pytest.raises(documents.DocumentsUnavailableError, match='counts 2 frame'):
+            documents.read_frames(root, SEQUENCE_ID)
+
     def test_a_field_missing_from_one_document_is_null_not_an_error(self, tmp_path):
         """A tree written by an older pipeline still has to load."""
         older = frame_document(image_time='20180824T040118')
@@ -134,10 +166,17 @@ class TestSchema:
     def test_a_tree_with_no_manifest_is_not_an_error(self, processed_root):
         """Documents are readable without an index; an index is derived."""
         assert documents.read_schema(processed_root) is None
-        assert documents.separator_for(processed_root) == documents.SEPARATOR
+        assert documents.contract_for(processed_root) == documents.Contract()
 
-    def test_the_declared_separator_is_used(self, indexed_root):
-        assert documents.separator_for(indexed_root) == '_'
+    def test_the_declared_contract_is_used(self, indexed_root):
+        contract = documents.contract_for(indexed_root)
+
+        assert contract.separator == '_'
+        assert contract.dropped == (('image', 'params'),)
+        assert 'image_uid' in contract.required_frame_columns
+
+    def test_no_index_root_falls_back_to_the_defaults(self):
+        assert documents.contract_for(None) == documents.Contract()
 
     def test_an_unknown_schema_version_is_refused(self, tmp_path, frames):
         """The manifest exists so a contract change is visible, not so it is ignored."""

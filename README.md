@@ -136,16 +136,24 @@ obs_info = ObservationInfo('PAN012_358d0f_20180824T035917')
 
 obs_info.image_metadata[['image_uid', 'image_status', 'image_camera_exptime']]
 
-# Only the frames the pipeline processed cleanly, rather than frames that
-# merely exist. `image_list` follows the query, so a failed frame is not read.
-obs_info = ObservationInfo('PAN012_358d0f_20180824T035917',
-                           image_query=USABLE_QUERY)
+# Every frame the sequence has, including the ones that failed processing.
+everything = ObservationInfo('PAN012_358d0f_20180824T035917', image_query='')
 ```
 
-`USABLE_QUERY` is `image_status == "MATCHED"`, which is exactly how the index
-computes `num_usable` -- so the frames you get are the ones the index counted.
-No filter is applied by default: defaulting to usable-only would silently hide
-failed frames, which reads as an observation that never had them.
+**The default is `USABLE_QUERY`**, which is `image_status == "MATCHED"` -- the
+frames the pipeline processed cleanly, and exactly how the index computes
+`num_usable`, so what you get is what the index counted. `image_list` follows
+the query, so a failed frame is not read either.
+
+Excluded frames are reported rather than merely absent. `num_frames` is what
+the sequence holds, `len(image_metadata)` is what the query kept, and the repr
+shows both when they differ, so a filtered observation cannot be mistaken for a
+smaller one:
+
+```text
+>>> ObservationInfo('PAN012_358d0f_20180824T035917')
+Obs: seq_id=PAN012_358d0f_20180824T035917 num_frames=310 of 372
+```
 
 This is a *per-frame* filter, and the old observation-level `status` argument
 was not. An observation marked `MATCHED` could still contain `ERROR` frames --

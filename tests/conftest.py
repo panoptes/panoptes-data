@@ -32,6 +32,21 @@ CAMERA_SERIAL = '032071000633'
 
 FINGERPRINT = 'a1b2c3d4e5f6'
 
+# Columns `panoptes.pipeline.index.REQUIRED_FRAME_COLUMNS` guarantees.
+REQUIRED_FRAME_COLUMNS = (
+    'unit_unit_id',
+    'sequence_sequence_id',
+    'sequence_sequence_time',
+    'sequence_field_name',
+    'sequence_camera_camera_id',
+    'sequence_camera_serial_number',
+    'image_uid',
+    'image_image_time',
+    'image_status',
+    'image_camera_exptime',
+    'image_params_fingerprint',
+)
+
 # Columns `panoptes.pipeline.index.OBSERVATION_COLUMNS` declares, in order.
 OBSERVATION_COLUMNS = (
     'sequence_sequence_id',
@@ -104,6 +119,14 @@ def frame_document(unit_id=UNIT_ID, camera_id=CAMERA_ID, sequence_time=SEQUENCE_
             },
             'file_creation_date': as_iso(image_time),
             'image_time': as_iso(image_time),
+            # The settings dump the pipeline stamps into every frame. It is
+            # present here on purpose: the index drops it, so a reader that
+            # does not produces columns `frames.parquet` lacks, and a fixture
+            # without it lets that bug pass unnoticed.
+            'params': {
+                'camera': {'saturation': 16384.0, 'effective_gain': 1.5},
+                'background': {'box_size': 79},
+            },
             'params_fingerprint': FINGERPRINT,
             'status': status,
         },
@@ -173,11 +196,16 @@ def build_index(processed_root: Path, index_root: Path | None = None, version: i
     index_root = Path(index_root if index_root is not None else processed_root)
     index_root.mkdir(parents=True, exist_ok=True)
 
-    rows = [
-        flatten(json.loads(path.read_text()))
-        for path in sorted(Path(processed_root).rglob('metadata.json'))
-    ]
+    rows = []
+    for path in sorted(Path(processed_root).rglob('metadata.json')):
+        document = json.loads(path.read_text())
+        # The producer's DROPPED step, which `schema.json` declares below.
+        document.get('image', {}).pop('params', None)
+        rows.append(flatten(document))
     frames = pd.DataFrame(rows)
+    frames = frames.reindex(
+        columns=list(dict.fromkeys([*REQUIRED_FRAME_COLUMNS, *frames.columns]))
+    )
 
     if frames.empty:
         observations = pd.DataFrame(columns=list(OBSERVATION_COLUMNS))

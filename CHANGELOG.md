@@ -110,10 +110,36 @@
   This is the per-frame filter the removed observation-level `status` argument
   was reaching for and was not: an observation marked `MATCHED` could still
   carry `ERROR` frames, so filtering on the observation returned all of them.
-  Nothing is filtered by default, because defaulting to usable-only would hide
-  failed frames rather than report them.
+
+  It is the **default** for `image_query`, since anything that reads pixels
+  wants the frames that processed cleanly. `image_query=''` gives every frame.
+  A default that hides frames has to say so, so `ObservationInfo.num_frames`
+  reports what the sequence holds against what the query kept, and the repr
+  shows both when they differ -- a filtered observation is not mistakable for a
+  smaller one.
 
 ### Fixed
+
+- `read_frames` applies the contract's dropped blocks and reindexes to its
+  required columns, so reading documents directly and reading `frames.parquet`
+  produce the same column names. Without the first, `image.params` -- a whole
+  settings dump per frame -- became columns the index does not have; without
+  the second, a field absent from every document of an older sequence produced
+  no column at all where the index holds a null one. Both are the same defect
+  as the one this release exists to fix, one level down: two readers of the
+  same values disagreeing about what they are called.
+
+- A frame the observation document counts but whose `metadata.json` is missing
+  raises. A glob sees only the files that exist, so nine documents under an
+  observation claiming ten read as a smaller observation rather than an
+  incomplete one.
+
+- The `get-metadata` CLI no longer writes a partial export. Per-sequence
+  failures were logged and the successful subset written anyway, which is a
+  file nothing downstream can distinguish from a complete one; it now reports
+  the count and exits non-zero without writing. It also catches
+  `DocumentsUnavailableError`, so an unconfigured root prints its message
+  instead of a traceback.
 
 - A frame document that cannot be read raises rather than being skipped. The
   pipeline's index walk skips them, correctly -- one bad file must not cost an

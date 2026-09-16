@@ -151,8 +151,8 @@ class TestMetadata:
         # The frame list follows the query, so a failed frame is not read either.
         assert len(obs_info.image_list) == 2
 
-    def test_the_default_hides_nothing(self, tmp_path, monkeypatch):
-        """Defaulting to usable-only would read as an observation that never failed."""
+    def test_the_default_is_usable_only(self, tmp_path, monkeypatch):
+        """Reading pixels wants the frames that processed cleanly, by default."""
         root = tmp_path / 'processed'
         write_sequence(root, [
             frame_document(image_time='20180824T040118', status='MATCHED'),
@@ -162,7 +162,41 @@ class TestMetadata:
 
         obs_info = obs_mod.ObservationInfo(sequence_id=SEQUENCE_ID)
 
-        assert 'ERROR' in list(obs_info.image_metadata.image_status)
+        assert list(obs_info.image_metadata.image_status) == ['MATCHED']
+
+    def test_an_empty_query_gives_every_frame(self, tmp_path, monkeypatch):
+        """The failed frames are still reachable; they are just not the default."""
+        root = tmp_path / 'processed'
+        write_sequence(root, [
+            frame_document(image_time='20180824T040118', status='MATCHED'),
+            frame_document(image_time='20180824T040248', status='ERROR'),
+        ])
+        monkeypatch.setenv('PANOPTES_PROCESSED_ROOT', str(root))
+
+        obs_info = obs_mod.ObservationInfo(sequence_id=SEQUENCE_ID, image_query='')
+
+        assert sorted(obs_info.image_metadata.image_status) == ['ERROR', 'MATCHED']
+
+    def test_excluded_frames_are_visible_not_merely_absent(self, tmp_path, monkeypatch):
+        """A filtered observation must not be mistakable for a smaller one."""
+        root = tmp_path / 'processed'
+        write_sequence(root, [
+            frame_document(image_time='20180824T040118', status='MATCHED'),
+            frame_document(image_time='20180824T040248', status='ERROR'),
+        ])
+        monkeypatch.setenv('PANOPTES_PROCESSED_ROOT', str(root))
+
+        obs_info = obs_mod.ObservationInfo(sequence_id=SEQUENCE_ID)
+
+        assert obs_info.num_frames == 2
+        assert len(obs_info.image_metadata) == 1
+        assert 'num_frames=1 of 2' in repr(obs_info)
+
+    def test_nothing_excluded_reads_plainly(self, processed_root):
+        obs_info = obs_mod.ObservationInfo(sequence_id=SEQUENCE_ID)
+
+        assert 'num_frames=2' in repr(obs_info)
+        assert ' of ' not in repr(obs_info)
 
     def test_a_document_missing_a_required_field_raises_naming_it(self, tmp_path, monkeypatch):
         no_uid = frame_document(image_time='20180824T040118')

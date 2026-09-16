@@ -88,7 +88,7 @@ def sequence_id_of(meta) -> str:
 class ObservationInfo:
     """A container class for information about an Observation."""
 
-    def __init__(self, sequence_id=None, meta=None, image_query='',
+    def __init__(self, sequence_id=None, meta=None, image_query=USABLE_QUERY,
                  processed_root: Path | str | None = None):
         """Initialize the observation info with a sequence_id.
 
@@ -122,10 +122,15 @@ class ObservationInfo:
                 search result and the observation together.
             image_query: A query string to use when querying for images. The
                 field names are the contract's, so this is `image_status` and
-                not `status`. Pass `USABLE_QUERY` for only the frames the
-                pipeline processed cleanly. It is empty by default: defaulting
-                to usable-only would silently hide failed frames, which reads
-                as an observation that never had them.
+                not `status`. Defaults to `USABLE_QUERY`, so the frames you get
+                are the ones the pipeline processed cleanly -- which is what
+                you want for anything that reads pixels. Pass ``''`` for every
+                frame the sequence has, including the failed ones.
+
+                Excluded frames are never merely absent: `num_frames` reports
+                what the sequence holds against what the query kept, and `repr`
+                shows both when they differ. A filtered observation should not
+                be mistakable for a smaller one.
             processed_root: The tree of pipeline documents, overriding the
                 ``processed_root`` setting for this instance.
         """
@@ -134,14 +139,20 @@ class ObservationInfo:
             processed_root if processed_root is not None else self._settings.processed_root,
             'processed root',
         )
-        self._separator = documents.separator_for(self._settings.resolved_index_root)
+        # The contract belongs to the tree being read. An explicit `index_root`
+        # setting still wins -- that is what it is for -- but otherwise the
+        # manifest to trust is the one in the tree this instance was pointed
+        # at, not the one in whichever tree the settings happen to name.
+        self._contract = documents.contract_for(
+            self._settings.index_root or self._processed_root
+        )
 
         self.sequence_id = sequence_id_of(meta) if meta is not None else sequence_id
         if self.sequence_id is None:
             raise ValueError('One of `sequence_id` or `meta` is required.')
 
         self.observation = documents.read_observation(
-            self._processed_root, self.sequence_id, separator=self._separator
+            self._processed_root, self.sequence_id, contract=self._contract
         )
         # `meta` used to be empty whenever the class was built from a sequence
         # id alone, which made "construct from an id" the second-class way of
@@ -229,10 +240,16 @@ class ObservationInfo:
             ValueError: if a document is missing a field the contract requires.
         """
         images_df = documents.read_frames(
-            self._processed_root, self.sequence_id, separator=self._separator
+            self._processed_root, self.sequence_id, contract=self._contract
         )
 
-        missing = [field for field in REQUIRED_FRAME_FIELDS if field not in images_df.columns]
+        # Absent *or* entirely null: the contract's required columns are
+        # reindexed into existence, so a field no document supplied is a column
+        # of nulls rather than a missing one, and a null uid locates no frame.
+        missing = [
+            field for field in REQUIRED_FRAME_FIELDS
+            if field not in images_df.columns or images_df[field].isna().all()
+        ]
         if missing:
             raise ValueError(
                 f'The frame documents for {self.sequence_id} are missing required '
@@ -246,6 +263,7 @@ class ObservationInfo:
         )
         images_df = images_df.set_index('image_image_time', drop=False).sort_index()
 
+        self.num_frames = len(images_df)
         if query > '':
             images_df = images_df.query(query)
 
@@ -373,7 +391,11 @@ class ObservationInfo:
         raise ImagesUnavailableError(IMAGES_UNAVAILABLE_MESSAGE)
 
     def __str__(self):
-        return f'Obs: seq_id={self.sequence_id} num_frames={len(self.image_list)}'
+        kept = len(self.image_list)
+        # Say so when the query dropped frames, so a filtered observation is
+        # not mistakable for one that never had them.
+        of_total = '' if kept == self.num_frames else f' of {self.num_frames}'
+        return f'Obs: seq_id={self.sequence_id} num_frames={kept}{of_total}'
 
     def __repr__(self):
         return str(self)

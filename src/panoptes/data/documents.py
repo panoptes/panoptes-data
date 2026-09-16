@@ -41,7 +41,7 @@ so a change there is visible here instead of silently renaming every column.
 import json
 from collections.abc import Iterator, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 import pandas as pd
 from panoptes.utils.images.fits import ImagePathInfo
@@ -51,6 +51,38 @@ from pyarrow import parquet
 #: `panoptes.pipeline.index.SEPARATOR`. Used when no ``schema.json`` declares
 #: one -- reading a tree directly does not require an index to exist.
 SEPARATOR = '_'
+
+#: Document blocks that do not become columns, matching
+#: `panoptes.pipeline.index.DROPPED`. ``image.params`` is a whole settings dump
+#: per frame, and ``image_params_fingerprint`` already summarizes it in one
+#: column -- the fingerprint is the part with meaning, since it is what the
+#: pipeline's work-list walk compares.
+#:
+#: Applying this is not an optimization. The index drops these blocks, so a
+#: reader that keeps them produces columns ``frames.parquet`` does not have,
+#: and the two ways into the same values stop agreeing about what they are
+#: called.
+DROPPED = (('image', 'params'),)
+
+#: Columns the index guarantees in ``frames.parquet``, matching
+#: `panoptes.pipeline.index.REQUIRED_FRAME_COLUMNS`. The producer reindexes to
+#: these so a tree of documents written before a field existed still yields one
+#: schema, and a consumer does not have to ask what happened to be in the
+#: archive. Reading documents directly has to do the same or the two paths
+#: disagree in the other direction.
+REQUIRED_FRAME_COLUMNS = (
+    'unit_unit_id',
+    'sequence_sequence_id',
+    'sequence_sequence_time',
+    'sequence_field_name',
+    'sequence_camera_camera_id',
+    'sequence_camera_serial_number',
+    'image_uid',
+    'image_image_time',
+    'image_status',
+    'image_camera_exptime',
+    'image_params_fingerprint',
+)
 
 #: The documents, as `panoptes.pipeline.settings.FileSettings` names them.
 OBSERVATION_FILENAME = 'observation.json'
@@ -151,20 +183,50 @@ def read_schema(index_root: Path | str) -> dict[str, Any] | None:
     return dict(manifest)
 
 
-def separator_for(index_root: Path | str | None) -> str:
-    """The separator the index at `index_root` declares, else `SEPARATOR`.
+class Contract(NamedTuple):
+    """How a document's nested keys become column names.
 
-    Contract 3.2 records the separator in the manifest precisely so a consumer
-    in another repository does not reverse-engineer it from a parquet footer.
+    The manifest records these precisely so a consumer in another repository
+    does not reverse-engineer them from a parquet footer (contract 3.2). Read
+    them rather than assume them, and a change on the producing side is a
+    change to a file here instead of a column that quietly stopped existing.
     """
-    if index_root is None:
-        return SEPARATOR
 
-    manifest = read_schema(index_root)
+    separator: str = SEPARATOR
+    dropped: tuple[tuple[str, ...], ...] = DROPPED
+    required_frame_columns: tuple[str, ...] = REQUIRED_FRAME_COLUMNS
+
+
+def contract_for(index_root: Path | str | None) -> Contract:
+    """The column contract the index at `index_root` declares, else the defaults.
+
+    A tree with no index still has a contract -- the constants above -- because
+    documents are readable without one.
+    """
+    manifest = read_schema(index_root) if index_root is not None else None
     if manifest is None:
-        return SEPARATOR
+        return Contract()
 
-    return manifest.get('separator') or SEPARATOR
+    dropped = manifest.get('dropped')
+    required = manifest.get('required_frame_columns')
+    return Contract(
+        separator=manifest.get('separator') or SEPARATOR,
+        dropped=tuple(tuple(block) for block in dropped) if dropped else (),
+        required_frame_columns=tuple(required) if required else (),
+    )
+
+
+def drop_blocks(document: dict[str, Any],
+                dropped: tuple[tuple[str, ...], ...] = DROPPED) -> dict[str, Any]:
+    """Remove the declared blocks from `document`, in place, returning it."""
+    for block in dropped:
+        *parents, leaf = block
+        node = document
+        for parent in parents:
+            node = node.get(parent) if isinstance(node, Mapping) else None
+        if isinstance(node, dict):
+            node.pop(leaf, None)
+    return document
 
 
 def sequence_directory(processed_root: Path | str, sequence_id: str) -> Path:
@@ -244,7 +306,7 @@ def read_document(path: Path | str) -> dict[str, Any] | None:
 
 
 def read_observation(processed_root: Path | str, sequence_id: str,
-                     separator: str = SEPARATOR) -> dict[str, Any]:
+                     contract: Contract | None = None) -> dict[str, Any]:
     """The sequence's ``observation.json``, flattened.
 
     Raises:
@@ -261,25 +323,53 @@ def read_observation(processed_root: Path | str, sequence_id: str,
             f'aggregated it yet.'
         )
 
-    return flatten(document, separator=separator)
+    return flatten(document, separator=(contract or Contract()).separator)
 
 
 def read_frames(processed_root: Path | str, sequence_id: str,
-                separator: str = SEPARATOR) -> pd.DataFrame:
+                contract: Contract | None = None) -> pd.DataFrame:
     """One row per frame of `sequence_id`, from its ``metadata.json`` documents.
 
-    A document that cannot be read is not skipped. The pipeline's own index
-    walk skips them, because one bad file must not cost an index over half a
-    million frames -- but here the unit of work is a single observation, and a
-    frame silently missing from it reads as an observation with fewer frames.
-    That is the same failure as a partial local archive, which
+    The rows carry the same column names `frames.parquet` does, which takes two
+    steps beyond flattening and neither is cosmetic. The contract's dropped
+    blocks are removed, so this does not produce columns the index lacks; and
+    the result is reindexed to the contract's required columns, so a tree whose
+    documents predate a field still yields the column the index would have held
+    as null. Without both, the two ways into the same values disagree about
+    what they are called, in opposite directions.
+
+    A document that cannot be read is not skipped, and a frame the observation
+    document counts but whose document is absent is an error. The pipeline's own
+    index walk skips unreadable files, because one bad file must not cost an
+    index over half a million frames -- but here the unit of work is a single
+    observation, and a frame missing from it reads as an observation with fewer
+    frames. That is the same failure as a partial local archive, which
     `ObservationInfo.get_image_list` already refuses to paper over.
 
     Raises:
-        DocumentsUnavailableError: if the sequence has no frame documents, or
-            if one of them cannot be read.
+        DocumentsUnavailableError: if the sequence has no frame documents, if
+            one of them cannot be read, or if the observation document counts
+            more frames than the tree holds.
     """
+    contract = contract or Contract()
     paths = list(find_frame_documents(processed_root, sequence_id))
+
+    # A glob only sees the documents that exist. If the observation document
+    # counts more frames than that, the missing ones would simply not appear --
+    # a shorter table that reads as a smaller observation rather than as an
+    # incomplete one.
+    expected = (read_document(
+        sequence_directory(processed_root, sequence_id) / OBSERVATION_FILENAME
+    ) or {}).get('num_frames')
+    if isinstance(expected, int) and len(paths) < expected:
+        raise DocumentsUnavailableError(
+            f'{sequence_id} has {len(paths)} frame document(s) under '
+            f'{sequence_directory(processed_root, sequence_id)}, but its observation '
+            f'document counts {expected} frame(s). The tree is incomplete for this '
+            f'sequence; reading it would report a shorter observation rather than a '
+            f'partial one.'
+        )
+
     if not paths:
         raise DocumentsUnavailableError(
             f'No frame documents for {sequence_id} under '
@@ -296,12 +386,18 @@ def read_frames(processed_root: Path | str, sequence_id: str,
                 f'{sequence_id} would be short by one frame rather than wrong in a '
                 f'way you could see. Reprocess that frame.'
             )
-        rows.append(flatten(document, separator=separator))
+        rows.append(
+            flatten(drop_blocks(document, contract.dropped), separator=contract.separator)
+        )
 
     # `pandas` unions the keys, so a field absent from one document arrives as
     # a null in that row rather than failing the read. Documents written by an
-    # older pipeline still have to load.
-    return pd.DataFrame(rows)
+    # older pipeline still have to load. `reindex` extends that to a field
+    # absent from *every* document, which unioning cannot see.
+    frames = pd.DataFrame(rows)
+    return frames.reindex(
+        columns=list(dict.fromkeys([*contract.required_frame_columns, *frames.columns]))
+    )
 
 
 def index_columns(index_root: Path | str | None, filename: str) -> list[str]:
