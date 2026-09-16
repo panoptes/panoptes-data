@@ -56,6 +56,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install hatch
       - name: Build package with Hatch
+        id: build
         run: |
           hatch clean
           hatch build
@@ -66,6 +67,13 @@ jobs:
       - name: Create the GitHub release
         # The annotated tag message is the release notes, so what the tag says
         # and what the release says cannot drift apart.
+        #
+        # This runs whenever there are dists to attach, including when the
+        # publish failed. The release is built from the tag and the build, so a
+        # PyPI-side problem -- a trusted-publisher claim that stops matching,
+        # say -- should not cost the release as well; the two outputs fail
+        # independently because they depend on different things.
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -76,7 +84,17 @@ jobs:
             echo "::error::${GITHUB_REF_NAME} has an empty tag message, and the release notes come from it."
             exit 1
           fi
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "${GITHUB_REF_NAME}" \
-            --notes-file notes.md \
-            dist/*
+          # Fixing a failed publish means re-running this job, so creating the
+          # release has to be repeatable. `gh release create` refuses a tag that
+          # already has one, which would turn the retry into a second failure.
+          if gh release view "${GITHUB_REF_NAME}" > /dev/null 2>&1; then
+            gh release edit "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file notes.md
+            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "${GITHUB_REF_NAME}" \
+              --notes-file notes.md \
+              dist/*
+          fi

@@ -4,6 +4,13 @@
 
 ### Fixed
 
+- The GitHub release no longer depends on the PyPI upload succeeding. It was
+  the last step and ran only if everything before it had, so a trusted-publisher
+  claim that stopped matching cost the release as well -- two outputs that
+  depend on different things failing together. It now runs whenever there are
+  dists to attach, and updates an existing release rather than refusing, so
+  re-running the job after fixing the publish works.
+
 - The release workflow no longer refuses every annotated tag.
   `actions/checkout` fetches the commit SHA *into* the tag ref, so the runner
   held a lightweight tag whatever the remote carried -- which failed the
