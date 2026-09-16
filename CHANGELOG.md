@@ -313,6 +313,10 @@
   `[tool.ruff]` configuration CI reads, pinned to the same version, so a hook
   and a job cannot disagree.
 
+- `CLAUDE.md` says pull requests open ready for review rather than as drafts.
+  Agent sessions tend to default to drafts, and a draft asks a reviewer to
+  guess whether the work is finished.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a

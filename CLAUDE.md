@@ -213,6 +213,10 @@ A test written for a fixed bug should be run against the unfixed code first
   first push; renaming after the push means force-pushing or reopening the PR.
   With no issue to point at, still say what the work is: `cleanup/ruff-config`
   beats `claude/amazing-newton-fmbd97`.
+- **Pull requests open ready for review, not as drafts.** A draft asks a
+  reviewer to guess whether it is finished; if the work is not ready, say what
+  is missing in the description instead. Agent sessions often default to
+  opening drafts -- this repository does not want that.
 - **`CHANGELOG.md` is updated in the branch that makes the change**, under
   `## Unreleased`, with [Keep a Changelog] headings. No entry for changes
   nobody outside the branch can observe.
