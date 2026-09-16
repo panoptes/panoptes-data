@@ -5,18 +5,18 @@ from pathlib import Path
 import pandas as pd
 from astropy.nddata import CCDData, Cutout2D
 from astropy.wcs import FITSFixedWarning
-
-from panoptes.data import documents
-from panoptes.data.settings import ImageStatus, SurveySettings
 from panoptes.utils.images import fits as fits_utils
 from panoptes.utils.images.fits import ImagePathInfo
 
-warnings.filterwarnings('ignore', category=FITSFixedWarning)
+from panoptes.data import documents
+from panoptes.data.settings import ImageStatus, SurveySettings
+
+warnings.filterwarnings("ignore", category=FITSFixedWarning)
 
 # The flattened document fields this class actually needs, named by the data
 # contract rather than guessed at. Everything else, including every URL field,
 # is optional -- see `ObservationInfo.public_urls`.
-REQUIRED_FRAME_FIELDS = ('image_uid', 'image_image_time')
+REQUIRED_FRAME_FIELDS = ("image_uid", "image_image_time")
 
 #: An `image_query` keeping only the frames the pipeline processed cleanly.
 #:
@@ -38,16 +38,16 @@ USABLE_QUERY = f'image_status == "{ImageStatus.MATCHED.name}"'
 # Where a sequence id is found on a metadata record. The observation index
 # groups on `sequence_sequence_id`, so that is what a row of search results
 # carries; a flattened `observation.json` carries the top-level `sequence_id`.
-SEQUENCE_ID_FIELDS = ('sequence_sequence_id', 'sequence_id')
+SEQUENCE_ID_FIELDS = ("sequence_sequence_id", "sequence_id")
 
 IMAGES_UNAVAILABLE_MESSAGE = (
-    'Archived frames cannot be downloaded. Every URL the metadata carries '
-    'points into a Google Cloud Storage bucket that no longer serves the '
-    'object anonymously, in every era of the archive, and there is no public '
-    'replacement -- see panoptes/panoptes-data#17. Frames are read from a '
-    'local copy of the archive instead: set PANOPTES_ARCHIVE_ROOT to the '
-    'directory holding the unit folders and `get_image_list` resolves the '
-    'sequence to files on disk.'
+    "Archived frames cannot be downloaded. Every URL the metadata carries "
+    "points into a Google Cloud Storage bucket that no longer serves the "
+    "object anonymously, in every era of the archive, and there is no public "
+    "replacement -- see panoptes/panoptes-data#17. Frames are read from a "
+    "local copy of the archive instead: set PANOPTES_ARCHIVE_ROOT to the "
+    "directory holding the unit folders and `get_image_list` resolves the "
+    "sequence to files on disk."
 )
 
 
@@ -74,22 +74,27 @@ def sequence_id_of(meta) -> str:
             if field in keys:
                 return str(meta[field])
     else:
-        keys = [name for name in dir(meta) if not name.startswith('_')]
+        keys = [name for name in dir(meta) if not name.startswith("_")]
         for field in SEQUENCE_ID_FIELDS:
             if hasattr(meta, field):
                 return str(getattr(meta, field))
 
     raise ValueError(
-        f'The record given as `meta` carries no sequence id: looked for '
-        f'{list(SEQUENCE_ID_FIELDS)} and found {sorted(keys)}.'
+        f"The record given as `meta` carries no sequence id: looked for "
+        f"{list(SEQUENCE_ID_FIELDS)} and found {sorted(keys)}."
     )
 
 
 class ObservationInfo:
     """A container class for information about an Observation."""
 
-    def __init__(self, sequence_id=None, meta=None, image_query=USABLE_QUERY,
-                 processed_root: Path | str | None = None):
+    def __init__(
+        self,
+        sequence_id=None,
+        meta=None,
+        image_query=USABLE_QUERY,
+        processed_root: Path | str | None = None,
+    ):
         """Initialize the observation info with a sequence_id.
 
         The metadata comes from the documents `panoptes-pipeline` wrote: the
@@ -137,19 +142,17 @@ class ObservationInfo:
         self._settings = SurveySettings()
         self._processed_root = documents.require_root(
             processed_root if processed_root is not None else self._settings.processed_root,
-            'processed root',
+            "processed root",
         )
         # The contract belongs to the tree being read. An explicit `index_root`
         # setting still wins -- that is what it is for -- but otherwise the
         # manifest to trust is the one in the tree this instance was pointed
         # at, not the one in whichever tree the settings happen to name.
-        self._contract = documents.contract_for(
-            self._settings.index_root or self._processed_root
-        )
+        self._contract = documents.contract_for(self._settings.index_root or self._processed_root)
 
         self.sequence_id = sequence_id_of(meta) if meta is not None else sequence_id
         if self.sequence_id is None:
-            raise ValueError('One of `sequence_id` or `meta` is required.')
+            raise ValueError("One of `sequence_id` or `meta` is required.")
 
         self.observation = documents.read_observation(
             self._processed_root, self.sequence_id, contract=self._contract
@@ -165,7 +168,7 @@ class ObservationInfo:
     @property
     def status(self):
         """The `ObservationStatus` name the pipeline last recorded, or None."""
-        return self.observation.get('status')
+        return self.observation.get("status")
 
     @property
     def params_fingerprint(self):
@@ -175,7 +178,7 @@ class ObservationInfo:
         with different fingerprints were not made by the same code with the
         same parameters, whatever else they have in common.
         """
-        return self.observation.get('params_fingerprint')
+        return self.observation.get("params_fingerprint")
 
     @property
     def public_urls(self):
@@ -192,7 +195,7 @@ class ObservationInfo:
             A DataFrame of whichever ``*_url`` columns are present, which may
             have no columns.
         """
-        return self.image_metadata.filter(regex=r'_url$')
+        return self.image_metadata.filter(regex=r"_url$")
 
     def get_image_cutout(self, data=None, coords=None, box_size=None, *args, **kwargs):
         """Gets a Cutout2D object for the given coords and box_size."""
@@ -212,11 +215,11 @@ class ObservationInfo:
 
         data0, header0 = fits_utils.getdata(data_img, header=True)
         wcs0 = fits_utils.getwcs(wcs_img)
-        ccd0 = CCDData(data0, wcs=wcs0, unit='adu', meta=header0)
+        ccd0 = CCDData(data0, wcs=wcs0, unit="adu", meta=header0)
 
         return ccd0
 
-    def get_metadata(self, query=''):
+    def get_metadata(self, query=""):
         """Read the per-frame documents of this observation.
 
         One row per ``metadata.json``, with the document's nested maps
@@ -247,30 +250,35 @@ class ObservationInfo:
         # reindexed into existence, so a field no document supplied is a column
         # of nulls rather than a missing one, and a null uid locates no frame.
         missing = [
-            field for field in REQUIRED_FRAME_FIELDS
+            field
+            for field in REQUIRED_FRAME_FIELDS
             if field not in images_df.columns or images_df[field].isna().all()
         ]
         if missing:
             raise ValueError(
-                f'The frame documents for {self.sequence_id} are missing required '
-                f'field(s) {missing}; got {sorted(images_df.columns)}'
+                f"The frame documents for {self.sequence_id} are missing required "
+                f"field(s) {missing}; got {sorted(images_df.columns)}"
             )
 
         # Set a time index, keeping the column: it is named by the contract and
         # dropping it would make `query` unable to mention it.
-        images_df['image_image_time'] = pd.to_datetime(
-            images_df.image_image_time, format='mixed', utc=True
+        images_df["image_image_time"] = pd.to_datetime(
+            images_df.image_image_time, format="mixed", utc=True
         )
-        images_df = images_df.set_index('image_image_time', drop=False).sort_index()
+        images_df = images_df.set_index("image_image_time", drop=False).sort_index()
 
         self.num_frames = len(images_df)
-        if query > '':
+        if query > "":
             images_df = images_df.query(query)
 
         return images_df
 
-    def get_image_list(self, bucket: str | None = None, file_ext: str = '.fits.fz',
-                       archive_root: Path | str | None = None):
+    def get_image_list(
+        self,
+        bucket: str | None = None,
+        file_ext: str = ".fits.fz",
+        archive_root: Path | str | None = None,
+    ):
         """Resolve the observation's raw frames to where they can be read.
 
         Each frame's location is derived from its ``image_uid``, which the
@@ -320,7 +328,7 @@ class ObservationInfo:
             ValueError: if an ``image_uid`` is not a well-formed archive path.
             FileNotFoundError: if a frame is missing from the local archive.
         """
-        ext = file_ext.lstrip('.')
+        ext = file_ext.lstrip(".")
         relative_paths = [
             self._frame_path(uid, ext) for uid in self.image_metadata.image_uid.values
         ]
@@ -329,15 +337,15 @@ class ObservationInfo:
         if archive_root is None:
             url_base = self._settings.img_base_url.unicode_string()
             bucket = bucket or self._settings.img_bucket
-            return [f'{url_base}{bucket}/{path}' for path in relative_paths]
+            return [f"{url_base}{bucket}/{path}" for path in relative_paths]
 
         archive_root = Path(archive_root)
         if not archive_root.is_dir():
             raise FileNotFoundError(
-                f'The archive root {archive_root} is not a directory, so no '
-                f'frame of {self.sequence_id} can be located. It should point '
-                f'at the directory holding the unit folders, e.g. '
-                f'<root>/PAN012/358d0f/20180824T035917/.'
+                f"The archive root {archive_root} is not a directory, so no "
+                f"frame of {self.sequence_id} can be located. It should point "
+                f"at the directory holding the unit folders, e.g. "
+                f"<root>/PAN012/358d0f/20180824T035917/."
             )
 
         image_list = [archive_root / path for path in relative_paths]
@@ -345,9 +353,9 @@ class ObservationInfo:
         for image_path in image_list:
             if not image_path.exists():
                 raise FileNotFoundError(
-                    f'Frame {image_path} is named by the metadata for '
-                    f'{self.sequence_id} but is not in the local archive at '
-                    f'{archive_root}. The copy is incomplete for this sequence.'
+                    f"Frame {image_path} is named by the metadata for "
+                    f"{self.sequence_id} but is not in the local archive at "
+                    f"{archive_root}. The copy is incomplete for this sequence."
                 )
 
         return image_list
@@ -359,19 +367,19 @@ class ObservationInfo:
         `ImagePathInfo` both validates it and rebuilds the path.
         """
         try:
-            path_info = ImagePathInfo(path=str(uid).replace('_', '/'))
+            path_info = ImagePathInfo(path=str(uid).replace("_", "/"))
         except ValueError as e:
             raise ValueError(
-                f'Image uid {uid!r} in the metadata for {self.sequence_id} is '
-                f'not a well-formed archive path, so the frame cannot be '
-                f'located: {e}'
+                f"Image uid {uid!r} in the metadata for {self.sequence_id} is "
+                f"not a well-formed archive path, so the frame cannot be "
+                f"located: {e}"
             ) from e
 
         return path_info.as_path(ext=ext)
 
-    def download_images(self, image_list=None, output_dir=None, show_progress=True,
-                        warn_on_error=True
-                        ):
+    def download_images(
+        self, image_list=None, output_dir=None, show_progress=True, warn_on_error=True
+    ):
         """Deprecated: archived frames are not currently available for download.
 
         The URLs this class builds are still the right archive locations, and
@@ -394,8 +402,8 @@ class ObservationInfo:
         kept = len(self.image_list)
         # Say so when the query dropped frames, so a filtered observation is
         # not mistakable for one that never had them.
-        of_total = '' if kept == self.num_frames else f' of {self.num_frames}'
-        return f'Obs: seq_id={self.sequence_id} num_frames={kept}{of_total}'
+        of_total = "" if kept == self.num_frames else f" of {self.num_frames}"
+        return f"Obs: seq_id={self.sequence_id} num_frames={kept}{of_total}"
 
     def __repr__(self):
         return str(self)

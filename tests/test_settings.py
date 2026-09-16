@@ -51,8 +51,7 @@ def test_an_index_root_can_sit_apart_from_the_processed_tree(clean_env):
 
 def test_reads_a_dotenv_in_the_working_directory(clean_env):
     (clean_env / ".env").write_text(
-        "PANOPTES_ARCHIVE_ROOT=/data/panoptes-archive\n"
-        "PANOPTES_IMG_BUCKET=some-other-bucket\n"
+        "PANOPTES_ARCHIVE_ROOT=/data/panoptes-archive\nPANOPTES_IMG_BUCKET=some-other-bucket\n"
     )
 
     settings = SurveySettings()

@@ -44,10 +44,10 @@ class SurveySettings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_prefix='panoptes_',
-        env_file='.env',
-        env_file_encoding='utf-8',
-        extra='ignore',
+        env_prefix="panoptes_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     archive_root: Path | None = None
@@ -58,8 +58,8 @@ class SurveySettings(BaseSettings):
     #: keeping it beside a read-only or mirrored processed tree rather than in
     #: it.
     index_root: Path | None = None
-    img_base_url: AnyHttpUrl = 'https://storage.googleapis.com'
-    img_bucket: str = 'panoptes-images-incoming'
+    img_base_url: AnyHttpUrl = "https://storage.googleapis.com"
+    img_bucket: str = "panoptes-images-incoming"
 
     @property
     def resolved_index_root(self) -> Path | None:
@@ -76,6 +76,7 @@ class ImageStatus(IntEnum):
     a document carries ``image_status`` as one of these names, which a reader
     comparing against them should not have to install the producer to do.
     """
+
     ERROR = auto()
     MASKED = auto()
     UNKNOWN = auto()
@@ -95,6 +96,7 @@ class ImageStatus(IntEnum):
 
 class ObservationStatus(IntEnum):
     """The status of an observation."""
+
     ERROR = auto()
     NOT_ENOUGH_FRAMES = auto()
     UNKNOWN = auto()

@@ -7,6 +7,28 @@ on:
     branches: [ main ]
 
 jobs:
+  # A pinned rule set that nothing runs is documentation, not a gate: the tree
+  # drifts dirty and the next contributor cannot tell which findings are theirs.
+  # Its own job, so a lint failure is legible as one rather than a red test run.
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Separate steps: "which one failed" should not need the log opened.
+      - name: Check lint
+        run: uv run --group dev ruff check .
+
+      - name: Check formatting
+        run: uv run --group dev ruff format --check .
+
   test:
     name: Run test suite
     runs-on: ubuntu-latest
@@ -17,32 +39,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: "pip-${{ runner.os }}-py-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt') }}"
-          restore-keys: |
-            pip-${{ runner.os }}-py-${{ matrix.python-version }}-
-
+      # `--locked` fails rather than re-resolving, so a dependency edit that
+      # skipped `uv lock` is caught here instead of silently testing something
+      # other than what the lockfile describes.
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          # Install broad dependencies used by the project/tests
-          if [ -f docs/requirements.txt ]; then pip install -r docs/requirements.txt; fi
-          # Install the package itself
-          pip install -e .
-          # Install test tools
-          pip install pytest pytest-cov
+        run: uv sync --locked --group test --python ${{ matrix.python-version }}
 
       - name: Run tests with coverage
         run: |
-          pytest --cov=panoptes.data --cov-report=xml:coverage.xml --cov-report=term-missing -q
+          uv run pytest --cov=panoptes.data --cov-report=xml:coverage.xml --cov-report=term-missing -q
 
       - name: Upload coverage (xml)
         if: always()

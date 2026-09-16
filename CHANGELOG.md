@@ -159,6 +159,48 @@
 [issue-15]: https://github.com/panoptes/panoptes-data/issues/15
 [contract]: https://github.com/panoptes/panoptes-pipeline/blob/main/plans/data-contract.md
 
+### Development tooling
+
+- Development goes through `uv` and `[dependency-groups]`, and the
+  `[tool.hatch.envs.*]` blocks are gone. They defined a second way to run the
+  tests whose dependency list was a copy of the `test` group's, so the two
+  could drift and only one of them was what CI ran. `hatchling` is still the
+  build backend and `hatch-vcs` still derives the version from the git tag --
+  what went away is environment management, not the build.
+
+- The ruff rule set is pinned to `E`, `F`, `I`, `UP` in `[tool.ruff.lint]`,
+  matching `panoptes-pipeline`. The config had selected no rules at all, so
+  `ruff check .` reported whatever the installed ruff version's defaults
+  happened to flag and every upgrade looked like a regression. `notebooks/`
+  and `docs/conf.py` are excluded, and the tree is clean under the pinned set.
+
+- `panoptes.data.__init__` imports `importlib.metadata` directly. It had
+  branched on a Python 3.8 check carrying a TODO to remove it, in a package
+  that requires 3.12.
+
+- The code is `ruff format`-clean on double quotes, ruff's default and
+  `panoptes-pipeline`'s. One style across the fleet is worth one reformatting
+  commit; the reformat is that commit and touches nothing else.
+
+- CI lints. `ruff check .` and `ruff format --check .` run as their own job,
+  on pushes to `main` and on pull requests targeting it -- the same triggers
+  the test workflow already used -- because a pinned rule set nothing runs is
+  documentation rather than a gate.
+
+- `uv.lock` is committed, and the test job installs with `uv sync --locked`.
+  A library's lockfile constrains nobody downstream -- only the bounds in
+  `[project.dependencies]` do that -- so this is for contributors: a red run
+  now means the change under review broke something, rather than that a
+  dependency shipped overnight. `--locked` fails instead of re-resolving, so a
+  dependency edit that skipped `uv lock` is caught rather than silently tested
+  against something else.
+
+- A weekly canary runs the suite against a *fresh* resolution, ignoring the
+  lockfile. Pinning makes pull-request CI attributable at the cost of nothing
+  noticing an upstream break until someone relocks; the canary is the other
+  half, and it fails on a schedule rather than in a user's environment. It can
+  also be run on demand.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a
