@@ -223,10 +223,9 @@ def find_simultaneous(
 
     ``PAN007_d37295_20250407T061910`` and ``PAN007_f6eb3d_20250407T061910`` are
     372 frames each, the same night, the same field, two different cameras on
-    one unit. That is plainly visible in the index and was not expressible as a
-    query (panoptes/panoptes-data#14), which is what this is for: a pair
-    observed simultaneously is the control the photometry rebuild compares
-    against, because the sky was the same and the hardware was not.
+    one unit. A pair observed simultaneously is the control the photometry
+    rebuild compares against, because the sky was the same and the hardware was
+    not (panoptes/panoptes-data#14).
 
     **Overlap in time, not "the same night".** The units are spread across
     longitudes, so a calendar date is a different slice of an observing night
@@ -360,10 +359,8 @@ def search_observations(
     See `panoptes.data.documents`.
 
     **A position is optional.** With no `coords`, `by_name`, or `ra`/`dec`, the
-    search is all-sky and every other filter still applies. It used to be
-    required, which is why the CLI asked for a 290-degree cone around
-    ``ra=180, dec=0`` to mean "everywhere" -- a workaround whose existence was
-    the argument for this (panoptes/panoptes-data#14).
+    search is all-sky and every other filter still applies
+    (panoptes/panoptes-data#14).
 
     >>> from astropy.coordinates import SkyCoord
     >>> from panoptes.data.search import search_observations
@@ -590,13 +587,11 @@ def get_all_observations(
 def get_metadata(observations: pd.DataFrame, errors: str = "raise") -> pd.DataFrame:
     """Read the per-frame documents of many sequences into one table.
 
-    This used to wrap the read in ``except Exception: pass``, so a run in which
-    every sequence failed returned the same empty table as a run with nothing to
-    read, and a run in which half failed returned half the archive with no sign
-    that it was half (panoptes/panoptes-data#13). Failing is now the default,
-    and a caller who wants what did read has to say so -- which is the same rule
-    the rest of the package follows: partial data raises, it never silently
-    shortens.
+    Failing is the default, and a caller who wants only what could be read has
+    to say so. Swallowing a per-sequence failure makes a run in which half the
+    sequences failed indistinguishable from one that read the whole archive
+    (panoptes/panoptes-data#13), and the rest of the package follows the same
+    rule: partial data raises, it never silently shortens.
 
     Args:
         observations: Rows carrying a sequence id, as `search_observations`

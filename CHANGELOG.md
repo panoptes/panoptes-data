@@ -69,56 +69,24 @@
 
 ### Added
 
-- A search needs no position. With no `coords`, `by_name` or `ra`/`dec`,
-  `search_observations` is all-sky and every other filter still applies -- so a
-  unit and a date range, or a frame count and a duration, are each a complete
-  query. A position was previously required, which is why the `get-metadata`
-  CLI asked for a 290-degree cone around `ra=180, dec=0`: a cone wide enough to
-  be the sky was the only way to say "everywhere". That workaround is gone.
-  Giving exactly one of `ra` and `dec` is now an error rather than a silent
-  all-sky search. [#14][issue-14]
+- A search needs no position: `search_observations` is all-sky with no `coords`,
+  `by_name` or `ra`/`dec`, so a unit and a date range is a complete query.
+  Giving exactly one of `ra` and `dec` is an error. [#14][issue-14], [#34][pr-34]
 
-- `search_observations` takes the cuts [data contract][contract] section 9 says
-  benchmark selection has to make: `min_num_usable`, `min_duration_minutes`,
-  `field_name` and `camera_id`, plus a `query` string applied last so it can
-  mention every column of the result.
+- `search_observations` takes the cuts [data contract][contract] section 9 names
+  for benchmark selection: `min_num_usable`, `min_duration_minutes`,
+  `field_name`, `camera_id`, and a `query` string applied last. `min_num_usable`
+  is not `min_num_frames` -- one 372-frame sequence in the archive has 310
+  usable. [#14][issue-14], [#34][pr-34]
 
-  `min_num_usable` is not `min_num_frames`. `num_frames` counts frames the
-  pipeline has a document for; one 372-frame sequence in the archive has 310
-  usable and 62 errors, and "300+ frames" as a benchmark criterion means the
-  first number. `min_duration_minutes` is the other half of that criterion --
-  "300+ frames over 3+ hours" was not evaluable at all while `total_exptime`
-  was null for every long sequence.
-
-  A sequence whose duration the index could not compute is excluded by a
-  duration cut rather than assumed to pass it.
-
-- `iso`, `airmass`, `moonfrac` and `moonsep` are attached to every sequence by
-  `add_frame_facts`, so they can be cut on. They are four of the nine header
-  facts contract 9 names and none has a column in `observations.parquet`, because
-  each is a per-frame reading -- the same reason the index carries no
-  coordinate. Each is reduced to its sequence mean, in the pass over
-  `frames.parquet` that already derives pointing, and a reading that will not
-  parse is dropped rather than poisoning the mean.
-
-  Unlike pointing, no spread is reported alongside: a cone is a membership test
-  that drift can move a sequence into, whereas "ISO 100" is a description, and
-  widening it per row would make one threshold mean a different thing for every
-  sequence.
+- `iso`, `airmass`, `moonfrac` and `moonsep` on every sequence, via
+  `add_frame_facts`. `observations.parquet` has no column for any of them
+  because each is a per-frame reading, so each is reduced to its sequence mean.
+  [#14][issue-14], [#34][pr-34]
 
 - `find_simultaneous` pairs sequences of one field recorded at the same time by
-  different cameras or different units -- the control the photometry rebuild
-  compares against, since the sky was the same and the hardware was not.
-  `PAN007_d37295_20250407T061910` and `PAN007_f6eb3d_20250407T061910` are 372
-  frames each on one night, plainly visible in the index and not previously
-  expressible as a query. [#14][issue-14]
-
-  Pairs are found on overlap between `start_time` and `end_time`, not on a
-  calendar date: the units are spread across longitudes, so any UTC-based
-  "night" key is the wrong slice of the night for somebody. A sweep over
-  sequences sorted by start time, rather than every pair, because twelve
-  thousand sequences compared each-to-each is a hundred and fifty million
-  comparisons to find a few hundred pairs.
+  different cameras or units, on overlap between `start_time` and `end_time`
+  rather than on a calendar date. [#14][issue-14], [#34][pr-34]
 
 - A `pairs` CLI command over `find_simultaneous`.
 
@@ -173,26 +141,16 @@
 
 ### Fixed
 
-- `get_metadata` no longer swallows every failure. It wrapped the whole
-  per-sequence loop in `except Exception: pass`, so a run in which half the
-  sequences failed returned half the archive with nothing to say it was half,
-  and a run in which *all* of them failed either returned an empty table or
-  died in `concat` on an empty list -- neither distinguishable from an archive
-  with nothing in it. It now raises `MetadataUnavailableError` by default,
-  carrying both the per-sequence failures and the partial table, so a caller
-  who wants an incomplete result chooses one instead of being handed one;
-  `errors='warn'` is that choice. Empty input returns an empty table.
-  [#13][issue-13]
-
-  This is the rule the rest of the package already followed: partial data
-  raises, it never silently shortens.
+- `get_metadata` raises on a partial read instead of wrapping the per-sequence
+  loop in `except Exception: pass`, which made half the archive and all of it
+  the same return value. `MetadataUnavailableError` carries the failures and
+  the rows that did read; `errors='warn'` returns the partial table.
+  [#13][issue-13], [#34][pr-34]
 
 - The `search` and `get-metadata` CLI commands no longer bind one short flag to
-  two options. `-s` was `--start-date` *and* `--end-date`, and `-r` was `--ra`
-  *and* `--radius`, so the later registration silently won and `-s 2024-01-01`
-  set the end date. `--start-date` keeps `-s`, `--end-date` takes `-e`,
-  `--radius` keeps `-r` and `--ra` is long-form only; in `get-metadata`,
-  `--sequence-id` takes `-i`.
+  two options. `-s` was `--start-date` *and* `--end-date`, so `-s 2024-01-01`
+  set the end date; `-r` was `--ra` *and* `--radius`. `--end-date` takes `-e`,
+  `--ra` is long-form only, and `--sequence-id` takes `-i`. [#34][pr-34]
 
 - `read_frames` applies the contract's dropped blocks and reindexes to its
   required columns, so reading documents directly and reading `frames.parquet`
@@ -225,11 +183,9 @@
 ### Removed
 
 - The two example notebooks, and with them the `notebooks/` ruff exclusion.
-  Their worked examples are in the README, where they are read without being
-  run and cannot re-dirty themselves; what did not survive the move is the part
-  that no longer works -- both ended in building a `wget` list from archive
-  URLs that 404 anonymously, and one opened by pip-installing a plotting
-  package to draw a calendar.
+  Their worked examples are in the README; what did not survive the move is the
+  part that no longer works, a `wget` list built from archive URLs that 404
+  anonymously. [#34][pr-34]
 
 - `SurveySettings.img_metadata_url` and `SurveySettings.observations_url`, and
   with them the last two things this package fetched over the network. Nothing
@@ -238,6 +194,7 @@
 [issue-12]: https://github.com/panoptes/panoptes-data/issues/12
 [issue-13]: https://github.com/panoptes/panoptes-data/issues/13
 [issue-14]: https://github.com/panoptes/panoptes-data/issues/14
+[pr-34]: https://github.com/panoptes/panoptes-data/pull/34
 [issue-15]: https://github.com/panoptes/panoptes-data/issues/15
 [contract]: https://github.com/panoptes/panoptes-pipeline/blob/main/plans/data-contract.md
 

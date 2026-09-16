@@ -89,10 +89,7 @@ def get_metadata(
 
         output_fn = output_dir / f"{unit_id}-{start_date}-{end_date}-metadata.csv"
         try:
-            # No position: a unit and a date range is the whole query. This
-            # used to ask for a 290-degree cone around ra=180, dec=0 because a
-            # position was required, and a cone wide enough to be the sky was
-            # the only way to say "everywhere" (panoptes/panoptes-data#14).
+            # No position: a unit and a date range is the whole query.
             results_df = search_observations(
                 unit_id=unit_id.upper(),
                 start_date=start_date,

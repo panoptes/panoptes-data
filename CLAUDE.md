@@ -94,6 +94,14 @@ continuation line.
 **A format-only change goes in its own commit**, never mixed with a real one.
 Reviewing a behavior change through a reflow is how things get missed.
 
+**Comments say what the code does, not what it used to do.** No "this used to
+...", "the previous version ...", "X is now Y". A reader of the current file
+cannot check a claim about a version they do not have, and the claim is stale
+the moment the next change lands. The history belongs in the commit, the
+changelog and the pull request, which is where a reader who wants it will look.
+The rare exception is a comment that stops someone reintroducing a specific
+bug, and it names the issue rather than narrating the diff.
+
 ## Architecture
 
 Four modules, layered, each depending only on the one below it.
