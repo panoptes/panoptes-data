@@ -293,6 +293,26 @@
   `settings` argument was non-optional while defaulting it to `None`; it is
   `SurveySettings | None` now.
 
+- `CONTRIBUTING.md` describes this repository. It had been PyScaffold's
+  generated template, largely unedited: every workflow it documented ran
+  through `tox`, which this repository has never configured; it pointed
+  contributors at `AUTHORS.rst` in a repository whose file is `AUTHORS.md`;
+  it carried eleven unanswered `{todo}` placeholders addressed to whoever
+  generated it, which Sphinx rendered into the published documentation; and
+  its `[repository]` and `[issue tracker]` links still read
+  `https://github.com/<USERNAME>/panoptes-data`. It is now 134 lines about
+  `uv`, `ruff`, `pytest` and the conventions in `CLAUDE.md`, replacing 371
+  about a toolchain nobody here uses.
+
+- `.pre-commit-config.yaml` runs `ruff`. It had been running `isort`, `black`
+  and `flake8` -- three tools whose jobs `ruff` already does, configured
+  nowhere, and disagreeing with the pinned rule set, so a contributor who
+  installed the hooks would have had them fight `ruff format` on every commit.
+  They could not have installed them in any case: `black` was pinned at
+  `rev: stable`, a tag that no longer exists. The hooks now read the same
+  `[tool.ruff]` configuration CI reads, pinned to the same version, so a hook
+  and a job cannot disagree.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a
