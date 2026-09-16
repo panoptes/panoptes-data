@@ -54,11 +54,15 @@ config makes each upgrade look like a regression. `notebooks/` and
 `docs/conf.py` are excluded: re-running a notebook re-dirties it, and nobody
 acts on the churn.
 
-**Never run `ruff format .` as part of another change.** `pyproject.toml` sets
-no `quote-style` and the codebase is single-quoted throughout, so the
-formatter's double-quote default would rewrite most of it. Whether to adopt
-that style is a question for a human, and a format-only change belongs in its
-own commit either way.
+**`uv run ruff format .` passes too.** Double quotes, ruff's default, matching
+`panoptes-pipeline`. Let the formatter decide: don't hand-wrap a line shorter
+than 100 characters, because it will join it back and the diff is noise. What
+it cannot do is split a string, so an `E501` inside a docstring or an f-string
+is yours — break it across implicit-concatenated pieces or indent a
+continuation line.
+
+**A format-only change goes in its own commit**, never mixed with a real one.
+Reviewing a behavior change through a reflow is how things get missed.
 
 ## Architecture
 

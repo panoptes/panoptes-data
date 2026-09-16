@@ -178,6 +178,14 @@
   branched on a Python 3.8 check carrying a TODO to remove it, in a package
   that requires 3.12.
 
+- The code is `ruff format`-clean on double quotes, ruff's default and
+  `panoptes-pipeline`'s. One style across the fleet is worth one reformatting
+  commit; the reformat is that commit and touches nothing else.
+
+- CI lints. `ruff check .` and `ruff format --check .` run as their own job on
+  every push and pull request, because a pinned rule set nothing runs is
+  documentation rather than a gate.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a

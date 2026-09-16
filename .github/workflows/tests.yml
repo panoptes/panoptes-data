@@ -7,6 +7,28 @@ on:
     branches: [ main ]
 
 jobs:
+  # A pinned rule set that nothing runs is documentation, not a gate: the tree
+  # drifts dirty and the next contributor cannot tell which findings are theirs.
+  # Its own job, so a lint failure is legible as one rather than a red test run.
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Separate steps: "which one failed" should not need the log opened.
+      - name: Check lint
+        run: uv run --group dev ruff check .
+
+      - name: Check formatting
+        run: uv run --group dev ruff format --check .
+
   test:
     name: Run test suite
     runs-on: ubuntu-latest
