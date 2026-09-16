@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.5.1 (2026-09-16)
+
+`v0.5.0` was tagged but never reached PyPI -- its trusted-publisher claim found
+no matching publisher, so the upload failed three times while the GitHub
+release went out. Everything below therefore reaches an installing user for the
+first time in this release, including the two fixes the `v0.5.0` tag already
+contained.
 
 ### Changed
 
