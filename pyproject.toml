@@ -26,6 +26,7 @@ dependencies = [
     "numpy",
     "pandas",
     "panoptes-utils[images]",
+    "pyarrow",
     "pydantic",
     "pydantic-settings",
     "python-dateutil",
@@ -68,6 +69,14 @@ fmt-check = "ruff format --check ."
 line-length = 100
 target-version = "py312"
 src = ["src"]
+
+[dependency-groups]
+test = [
+    "coverage>=7.0,<8.0",
+    "pytest>=7.0,<8.0",
+    "pytest-cov>=4.0,<5.0",
+    "pytest-doctestplus>=1.0,<2.0",
+]
 
 [tool.hatch.envs.tests]
 dependencies = [

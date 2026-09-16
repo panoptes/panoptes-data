@@ -8,10 +8,10 @@ from panoptes.data.settings import SurveySettings
 
 PANOPTES_KEYS = (
     "PANOPTES_ARCHIVE_ROOT",
+    "PANOPTES_PROCESSED_ROOT",
+    "PANOPTES_INDEX_ROOT",
     "PANOPTES_IMG_BASE_URL",
     "PANOPTES_IMG_BUCKET",
-    "PANOPTES_IMG_METADATA_URL",
-    "PANOPTES_OBSERVATIONS_URL",
 )
 
 
@@ -28,7 +28,25 @@ def test_defaults_with_no_configuration(clean_env):
     settings = SurveySettings()
 
     assert settings.archive_root is None
+    assert settings.processed_root is None
+    assert settings.index_root is None
     assert settings.img_bucket == "panoptes-images-incoming"
+
+
+def test_the_index_defaults_to_sitting_in_the_processed_tree(clean_env):
+    """Where `panoptes.pipeline.index.build` puts it, so one setting usually does."""
+    settings = SurveySettings(processed_root="/data/panoptes-processed")
+
+    assert str(settings.resolved_index_root) == "/data/panoptes-processed"
+
+
+def test_an_index_root_can_sit_apart_from_the_processed_tree(clean_env):
+    """The index is regenerable, so a read-only processed tree need not hold it."""
+    settings = SurveySettings(
+        processed_root="/data/panoptes-processed", index_root="/data/panoptes-index"
+    )
+
+    assert str(settings.resolved_index_root) == "/data/panoptes-index"
 
 
 def test_reads_a_dotenv_in_the_working_directory(clean_env):
@@ -80,5 +98,7 @@ def test_the_shipped_example_is_a_valid_dotenv(clean_env):
     settings = SurveySettings()
 
     assert str(settings.archive_root) == "/data/panoptes-archive"
+    assert str(settings.processed_root) == "/data/panoptes-processed"
     # The commented-out lines stay commented: they are the defaults.
+    assert settings.index_root is None
     assert settings.img_bucket == "panoptes-images-incoming"
