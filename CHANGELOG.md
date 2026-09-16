@@ -211,10 +211,11 @@
   the group. It is the same fix as dropping the hatch envs, applied to the one
   path still on `pip`.
 
-- `.github/workflows/docs.yml` installs with `uv sync --locked --group docs`
-  and builds with `uv run make html`, matching the test workflow.
-  `.readthedocs.yaml` runs the same two commands through `build.commands`, so
-  Read the Docs builds what CI builds rather than resolving its own.
+- `.github/workflows/docs.yml` installs with `uv sync --locked --group docs`,
+  matching the test workflow, and builds the site from `pyproject.toml` and the
+  lockfile rather than a requirements file. (It built with Sphinx through
+  `make html` when that change was made, and Read the Docs ran the same
+  commands; the entry below replaces both.)
 
 - The docs workflow no longer runs the test suite. Its `test` job was a second
   copy of the one in `tests.yml` -- same suite, same coverage flags, same
@@ -231,8 +232,10 @@
   answered. It is gone, and so is `docs/Makefile`. The site is `zensical.toml`,
   about 80 lines, most of it the `nav`.
 
-- Every page in `docs/` is now either a snippet line or a `:::` block, so
-  nothing there is a copy. `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
+- Every page in `docs/` now carries a snippet line or a `:::` block and little
+  else -- a heading, at most a sentence -- so nothing there is a copy. The
+  exception is `docs/building.md`, which is prose about the documentation build
+  and has nowhere else to live. `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
   `AUTHORS.md` and `LICENSE.txt` stay at the repository root and are included
   from it; the API reference is `mkdocstrings` reading the docstrings, which
   replaces the generated `docs/api/*.rst` that `.gitignore` had to exclude.
