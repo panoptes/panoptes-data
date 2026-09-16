@@ -8,7 +8,9 @@ from panoptes.data import documents
 from panoptes.data import search as search_mod
 from panoptes.data.search import (
     MetadataUnavailableError,
+    add_frame_facts,
     add_pointing,
+    find_simultaneous,
     get_all_observations,
     search_observations,
 )
@@ -39,6 +41,20 @@ def observations_table(**overrides):
             "mount_dec": [20.0, 20.1, -10.0],
             "mount_ra_drift": [0.0, 0.0, 0.0],
             "mount_dec_drift": [0.0, 0.0, 0.0],
+            "start_time": [
+                "2023-01-01T00:00:00+00:00",
+                "2023-01-02T00:00:00+00:00",
+                "2023-06-01T00:00:00+00:00",
+            ],
+            "end_time": [
+                "2023-01-01T00:10:00+00:00",
+                "2023-01-02T00:04:00+00:00",
+                "2023-06-01T03:20:00+00:00",
+            ],
+            "iso": [100.0, 200.0, 100.0],
+            "airmass": [1.1, 2.5, 1.3],
+            "moonfrac": [0.1, 0.9, 0.2],
+            "moonsep": [80.0, 20.0, 70.0],
         }
     )
     return table.assign(**overrides)
@@ -428,6 +444,332 @@ def test_usable_query_agrees_with_num_usable(tmp_path, monkeypatch):
     filtered = ObservationInfo(sequence_id=SEQUENCE_ID, image_query=USABLE_QUERY)
 
     assert len(filtered.image_metadata) == num_usable == 2
+
+
+class TestAddFrameFacts:
+    """panoptes/panoptes-data#14: the header facts only per-frame records carry."""
+
+    def test_each_fact_is_the_sequence_mean(self):
+        frames = pd.DataFrame(
+            {
+                "sequence_sequence_id": ["S1", "S1", "S2"],
+                "image_camera_iso": [100, 100, 200],
+                "sequence_coordinates_airmass": [1.0, 2.0, 1.5],
+                "image_environment_moonfrac": [0.2, 0.4, 0.8],
+                "image_environment_moonsep": [70.0, 90.0, 30.0],
+            }
+        )
+        observations = pd.DataFrame({"sequence_sequence_id": ["S1", "S2"]})
+
+        result = add_frame_facts(observations, frames).set_index("sequence_sequence_id")
+
+        assert result.loc["S1"].iso == pytest.approx(100.0)
+        assert result.loc["S1"].airmass == pytest.approx(1.5)
+        assert result.loc["S1"].moonfrac == pytest.approx(0.3)
+        assert result.loc["S1"].moonsep == pytest.approx(80.0)
+        assert result.loc["S2"].airmass == pytest.approx(1.5)
+
+    def test_a_fact_no_document_carried_is_null_not_missing(self):
+        """A cut on it selects nothing; it does not raise. Same rule as pointing."""
+        frames = pd.DataFrame(
+            {"sequence_sequence_id": ["S1"], "image_camera_iso": [100]},
+        )
+
+        result = add_frame_facts(pd.DataFrame({"sequence_sequence_id": ["S1"]}), frames)
+
+        assert result.iso.iloc[0] == pytest.approx(100.0)
+        for name in ("airmass", "moonfrac", "moonsep"):
+            assert name in result.columns
+            assert result[name].isna().all()
+
+    def test_an_index_with_no_facts_at_all(self):
+        frames = pd.DataFrame({"sequence_sequence_id": ["S1"]})
+
+        result = add_frame_facts(pd.DataFrame({"sequence_sequence_id": ["S1"]}), frames)
+
+        assert set(search_mod.FRAME_FACT_COLUMNS.values()) <= set(result.columns)
+        assert result[list(search_mod.FRAME_FACT_COLUMNS.values())].isna().all().all()
+
+    def test_an_unparseable_reading_is_dropped_rather_than_poisoning_the_mean(self):
+        """`iso` is an unparsed header value and is a string in some eras."""
+        frames = pd.DataFrame(
+            {
+                "sequence_sequence_id": ["S1", "S1", "S1"],
+                "image_camera_iso": ["100", "200", "AUTO"],
+            }
+        )
+
+        result = add_frame_facts(pd.DataFrame({"sequence_sequence_id": ["S1"]}), frames)
+
+        assert result.iso.iloc[0] == pytest.approx(150.0)
+
+    def test_the_index_read_attaches_them(self, indexed_root):
+        result = get_all_observations().set_index("sequence_sequence_id").loc[SEQUENCE_ID]
+
+        assert result.iso == pytest.approx(100.0)
+        assert result.airmass == pytest.approx(1.2)
+        assert result.moonfrac == pytest.approx(0.3)
+        assert result.moonsep == pytest.approx(60.0)
+
+
+class TestAllSkySearch:
+    """panoptes/panoptes-data#14: a position was required, so the CLI faked one."""
+
+    def test_no_position_searches_everything(self):
+        results = search_observations(
+            source=observations_table(), start_date="2023-01-01", end_date="2023-12-31"
+        )
+
+        assert len(results) == 3
+
+    def test_an_index_with_no_pointing_is_still_searchable_all_sky(self):
+        """The cone columns are never touched, so a null pointing is not a null result."""
+        table = observations_table(mount_ra=np.nan, mount_dec=np.nan)
+
+        results = search_observations(source=table, start_date="2023-01-01", end_date="2023-12-31")
+
+        assert len(results) == 3
+
+    def test_half_a_position_is_an_error_not_the_whole_sky(self):
+        with pytest.raises(ValueError, match="needs both"):
+            search_observations(ra=10, source=observations_table(), start_date="2023-01-01")
+
+        with pytest.raises(ValueError, match="needs both"):
+            search_observations(dec=20, source=observations_table(), start_date="2023-01-01")
+
+
+class TestBenchmarkFilters:
+    """panoptes/panoptes-data#14: the cuts data contract 9 says selection makes."""
+
+    def test_min_num_usable_is_not_min_num_frames(self):
+        table = observations_table(num_frames=[372, 5, 5], num_usable=[310, 5, 5])
+
+        by_frames = search_observations(
+            source=table, start_date="2023-01-01", end_date="2023-12-31", min_num_frames=350
+        )
+        by_usable = search_observations(
+            source=table, start_date="2023-01-01", end_date="2023-12-31", min_num_usable=350
+        )
+
+        assert len(by_frames) == 1
+        assert len(by_usable) == 0
+
+    def test_min_duration_minutes(self):
+        results = search_observations(
+            source=observations_table(),
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            min_duration_minutes=180,
+        )
+
+        assert list(results.sequence_sequence_id) == ["PAN002_cccccc_20230601T000000"]
+
+    def test_an_unmeasurable_duration_is_excluded_not_assumed_long_enough(self):
+        table = observations_table(duration_minutes=[np.nan, 4.0, 200.0])
+
+        results = search_observations(
+            source=table,
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            min_duration_minutes=1,
+        )
+
+        assert list(results.sequence_sequence_id) == [
+            "PAN001_bbbbbb_20230102T000000",
+            "PAN002_cccccc_20230601T000000",
+        ]
+
+    def test_filters_by_field_name_and_camera_id(self):
+        by_field = search_observations(
+            source=observations_table(),
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            field_name="B",
+        )
+        by_camera = search_observations(
+            source=observations_table(),
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            camera_id=["aaaaaa", "cccccc"],
+        )
+
+        assert list(by_field.field_name) == ["B"]
+        assert list(by_camera.camera_id) == ["aaaaaa", "cccccc"]
+
+    def test_the_query_reaches_the_frame_facts(self):
+        results = search_observations(
+            source=observations_table(),
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            query="iso == 100 and moonfrac < 0.25 and airmass < 1.5",
+        )
+
+        assert list(results.sequence_sequence_id) == [
+            "PAN001_aaaaaa_20230101T000000",
+            "PAN002_cccccc_20230601T000000",
+        ]
+
+    def test_the_query_is_applied_after_exptime_is_derived(self):
+        """It runs last precisely so it can mention a column search itself adds."""
+        results = search_observations(
+            source=observations_table(),
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            query="exptime < 50",
+        )
+
+        assert list(results.sequence_sequence_id) == ["PAN002_cccccc_20230601T000000"]
+
+    def test_a_query_naming_no_column_says_which_columns_there_are(self):
+        with pytest.raises(ValueError, match="Available columns"):
+            search_observations(
+                source=observations_table(),
+                start_date="2023-01-01",
+                end_date="2023-12-31",
+                query="seeing < 3",
+            )
+
+
+class TestFindSimultaneous:
+    """panoptes/panoptes-data#14: same night, same field, two different bodies."""
+
+    def pairs_table(self, **overrides):
+        """Two cameras on PAN007 on the same field, plus one unrelated sequence."""
+        table = pd.DataFrame(
+            {
+                "sequence_sequence_id": [
+                    "PAN007_d37295_20250407T061910",
+                    "PAN007_f6eb3d_20250407T061910",
+                    "PAN012_358d0f_20250407T061910",
+                ],
+                "unit_id": ["PAN007", "PAN007", "PAN012"],
+                "camera_id": ["d37295", "f6eb3d", "358d0f"],
+                "field_name": ["M42", "M42", "Andromeda"],
+                "num_frames": [372, 372, 10],
+                "num_usable": [310, 372, 10],
+                "start_time": [
+                    "2025-04-07T06:19:10+00:00",
+                    "2025-04-07T06:20:10+00:00",
+                    "2025-04-07T06:19:10+00:00",
+                ],
+                "end_time": [
+                    "2025-04-07T10:19:10+00:00",
+                    "2025-04-07T10:20:10+00:00",
+                    "2025-04-07T10:19:10+00:00",
+                ],
+            }
+        )
+        return table.assign(**overrides)
+
+    def test_two_cameras_on_one_unit_are_a_pair(self):
+        pairs = find_simultaneous(self.pairs_table())
+
+        assert len(pairs) == 1
+        assert pairs.camera_id_a.iloc[0] == "d37295"
+        assert pairs.camera_id_b.iloc[0] == "f6eb3d"
+        assert pairs.field_name.iloc[0] == "M42"
+        # Started a minute late, ended a minute late: four hours less a minute.
+        assert pairs.overlap_minutes.iloc[0] == pytest.approx(239.0)
+
+    def test_a_different_field_is_not_a_pair_unless_asked(self):
+        table = self.pairs_table(field_name=["M42", "Andromeda", "Triangulum"])
+
+        assert len(find_simultaneous(table)) == 0
+        assert len(find_simultaneous(table, same_field=False)) == 3
+
+    def test_across_unit_id_ignores_two_cameras_on_one_unit(self):
+        table = self.pairs_table(field_name=["M42", "M42", "M42"])
+
+        by_camera = find_simultaneous(table, across="camera_id")
+        by_unit = find_simultaneous(table, across="unit_id")
+
+        assert len(by_camera) == 3
+        assert len(by_unit) == 2
+        assert set(by_unit.unit_id_a) | set(by_unit.unit_id_b) == {"PAN007", "PAN012"}
+
+    def test_sequences_that_did_not_overlap_are_not_a_pair(self):
+        table = self.pairs_table(
+            start_time=[
+                "2025-04-07T06:19:10+00:00",
+                "2025-04-07T11:00:00+00:00",
+                "2025-04-07T06:19:10+00:00",
+            ],
+            end_time=[
+                "2025-04-07T10:19:10+00:00",
+                "2025-04-07T14:00:00+00:00",
+                "2025-04-07T10:19:10+00:00",
+            ],
+        )
+
+        assert len(find_simultaneous(table)) == 0
+
+    def test_min_overlap_minutes_discards_a_brief_coincidence(self):
+        table = self.pairs_table(
+            start_time=[
+                "2025-04-07T06:19:10+00:00",
+                "2025-04-07T10:14:10+00:00",
+                "2025-04-07T06:19:10+00:00",
+            ],
+            end_time=[
+                "2025-04-07T10:19:10+00:00",
+                "2025-04-07T14:00:00+00:00",
+                "2025-04-07T10:19:10+00:00",
+            ],
+        )
+
+        assert len(find_simultaneous(table, min_overlap_minutes=1)) == 1
+        assert len(find_simultaneous(table, min_overlap_minutes=30)) == 0
+
+    def test_an_unrecorded_field_is_not_a_matched_field(self):
+        """Two sequences that never said where they pointed are not a known pair."""
+        table = self.pairs_table(field_name=[np.nan, np.nan, np.nan])
+
+        assert len(find_simultaneous(table)) == 0
+        assert len(find_simultaneous(table, same_field=False)) == 3
+
+    def test_an_unknown_extent_overlaps_nothing(self):
+        table = self.pairs_table(end_time=[None, None, None])
+
+        assert len(find_simultaneous(table)) == 0
+
+    def test_a_table_missing_an_optional_column_still_reports_it(self):
+        """The result's columns must not depend on what the archive happened to hold."""
+        table = self.pairs_table().drop(columns=["num_usable"])
+
+        pairs = find_simultaneous(table)
+
+        assert len(pairs) == 1
+        assert pairs.num_usable_a.isna().all()
+        assert pairs.num_frames_a.iloc[0] == 372
+
+    def test_an_empty_result_still_has_its_columns(self):
+        pairs = find_simultaneous(self.pairs_table(field_name=["A", "B", "C"]))
+
+        assert len(pairs) == 0
+        assert "overlap_minutes" in pairs.columns
+        assert "sequence_sequence_id_a" in pairs.columns
+
+    def test_the_input_is_not_mutated(self):
+        table = self.pairs_table()
+        before = table.copy()
+
+        find_simultaneous(table)
+
+        pd.testing.assert_frame_equal(table, before)
+
+    def test_an_unpairable_column_says_what_the_two_ways_are(self):
+        with pytest.raises(ValueError, match="camera_id"):
+            find_simultaneous(self.pairs_table(), across="field_name")
+
+    def test_a_table_without_the_extent_columns_says_so(self):
+        with pytest.raises(ValueError, match="start_time"):
+            find_simultaneous(pd.DataFrame({"sequence_sequence_id": ["S1"], "camera_id": ["a"]}))
+
+    def test_a_search_result_feeds_straight_in(self, indexed_root):
+        """The whole point: the pairing runs over what `search_observations` returns."""
+        results = search_observations(source=get_all_observations(), start_date="2018-01-01")
+
+        assert len(find_simultaneous(results)) == 0
 
 
 class TestGetMetadata:

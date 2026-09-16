@@ -69,6 +69,62 @@
 
 ### Added
 
+- A search needs no position. With no `coords`, `by_name` or `ra`/`dec`,
+  `search_observations` is all-sky and every other filter still applies -- so a
+  unit and a date range, or a frame count and a duration, are each a complete
+  query. A position was previously required, which is why the `get-metadata`
+  CLI asked for a 290-degree cone around `ra=180, dec=0`: a cone wide enough to
+  be the sky was the only way to say "everywhere". That workaround is gone.
+  Giving exactly one of `ra` and `dec` is now an error rather than a silent
+  all-sky search. [#14][issue-14]
+
+- `search_observations` takes the cuts [data contract][contract] section 9 says
+  benchmark selection has to make: `min_num_usable`, `min_duration_minutes`,
+  `field_name` and `camera_id`, plus a `query` string applied last so it can
+  mention every column of the result.
+
+  `min_num_usable` is not `min_num_frames`. `num_frames` counts frames the
+  pipeline has a document for; one 372-frame sequence in the archive has 310
+  usable and 62 errors, and "300+ frames" as a benchmark criterion means the
+  first number. `min_duration_minutes` is the other half of that criterion --
+  "300+ frames over 3+ hours" was not evaluable at all while `total_exptime`
+  was null for every long sequence.
+
+  A sequence whose duration the index could not compute is excluded by a
+  duration cut rather than assumed to pass it.
+
+- `iso`, `airmass`, `moonfrac` and `moonsep` are attached to every sequence by
+  `add_frame_facts`, so they can be cut on. They are four of the nine header
+  facts contract 9 names and none has a column in `observations.parquet`, because
+  each is a per-frame reading -- the same reason the index carries no
+  coordinate. Each is reduced to its sequence mean, in the pass over
+  `frames.parquet` that already derives pointing, and a reading that will not
+  parse is dropped rather than poisoning the mean.
+
+  Unlike pointing, no spread is reported alongside: a cone is a membership test
+  that drift can move a sequence into, whereas "ISO 100" is a description, and
+  widening it per row would make one threshold mean a different thing for every
+  sequence.
+
+  Camera *model* is not among them, and cannot be: no document records one. The
+  camera uid is `camera_id` and is filterable.
+
+- `find_simultaneous` pairs sequences of one field recorded at the same time by
+  different cameras or different units -- the control the photometry rebuild
+  compares against, since the sky was the same and the hardware was not.
+  `PAN007_d37295_20250407T061910` and `PAN007_f6eb3d_20250407T061910` are 372
+  frames each on one night, plainly visible in the index and not previously
+  expressible as a query. [#14][issue-14]
+
+  Pairs are found on overlap between `start_time` and `end_time`, not on a
+  calendar date: the units are spread across longitudes, so any UTC-based
+  "night" key is the wrong slice of the night for somebody. A sweep over
+  sequences sorted by start time, rather than every pair, because twelve
+  thousand sequences compared each-to-each is a hundred and fifty million
+  comparisons to find a few hundred pairs.
+
+- A `pairs` CLI command over the same function.
+
 - `PANOPTES_PROCESSED_ROOT` names the pipeline's document tree, and
   `PANOPTES_INDEX_ROOT` names where the parquet index lives -- defaulting to the
   processed tree, which is where the pipeline builds it. It is a separate

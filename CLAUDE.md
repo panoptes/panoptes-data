@@ -182,6 +182,23 @@ not from any URL field.
   return value. `MetadataUnavailableError` carries the failures *and* the rows
   that did read, so `errors='warn'` is a choice a caller makes rather than a
   default they are handed. Same rule as `read_frames` and `get_image_list`.
+- **A search with no position is all-sky, and that is the normal case.** The
+  `ra=180, dec=0, radius=290` in the CLI was a cone wide enough to be the sky,
+  standing in for a filter that did not exist (panoptes/panoptes-data#14). Half
+  a position — one of `ra`/`dec` — is an error, not a request for everything.
+- **The frame facts are means with no spread, unlike pointing.** `iso`,
+  `airmass`, `moonfrac` and `moonsep` are per-frame readings `observations.parquet`
+  has no column for, so `add_frame_facts` reduces them in the same pass that
+  derives pointing. They get no drift companion on purpose: a cone is a
+  membership test that drift can move a sequence into, whereas "ISO 100" is a
+  description, and widening it per row would make one threshold mean a
+  different thing for every sequence. Camera *model* is not among them and
+  cannot be — no document records one (contract 9 names the nine header facts
+  selection may cut on).
+- **`find_simultaneous` pairs on time overlap, never on a "night".** The units
+  sit at different longitudes, so a UTC calendar date is a different slice of
+  the observing night for each of them. `start_time`/`end_time` are contract
+  columns and admit no such argument.
 
 ## Tests
 

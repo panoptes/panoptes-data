@@ -89,6 +89,41 @@ from that mean, and a search cone is widened per sequence by that sequence's own
 drift. An observation whose mean sits just outside the cone, but which spent
 half the night inside it, is found.
 
+### Selecting observations to work on
+
+A position is optional, so a search can be all-sky, and the cuts data contract 9
+names for benchmark selection are each expressible:
+
+```py
+# 300 usable frames over three hours, anywhere in the sky, with the moon down.
+benchmarks = search_observations(
+    start_date="2024-01-01",
+    min_num_usable=300,
+    min_duration_minutes=180,
+    query="moonfrac < 0.25 and airmass < 1.5",
+)
+```
+
+`min_num_usable` is not `min_num_frames`: one 372-frame sequence in the archive
+has 310 usable frames and 62 errors, and only the first filter tells them apart.
+`iso`, `airmass`, `moonfrac` and `moonsep` are per-frame header readings that
+`observations.parquet` carries no column for, so they are reduced to a sequence
+mean and attached alongside the pointing -- which is why `query` reaches them.
+
+Sequences recorded at the same time by different hardware are the control the
+photometry rebuild compares against, since the sky was the same and the camera
+was not:
+
+```py
+from panoptes.data.search import find_simultaneous, get_all_observations
+
+pairs = find_simultaneous(get_all_observations(), across="camera_id")
+```
+
+Pairing is on overlap between each sequence's `start_time` and `end_time`, not
+on a calendar date: the units sit at different longitudes, so any UTC-based
+"night" is the wrong slice of the night for somebody.
+
 ### Configuration
 
 Settings are read from the environment with a `PANOPTES_` prefix, and from a
