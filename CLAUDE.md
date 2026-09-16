@@ -80,8 +80,9 @@ a second build, from a second config, of the same site.
 pinned in `[tool.ruff.lint]` — `E`, `F`, `I`, `UP`, matching
 `panoptes-pipeline` — precisely so that "clean" means the same thing on every
 machine and across ruff releases; ruff's own defaults move, and an unpinned
-config makes each upgrade look like a regression. `notebooks/` is excluded:
-re-running a notebook re-dirties it, and nobody acts on the churn.
+config makes each upgrade look like a regression. Nothing is excluded: the
+`notebooks/` exclusion went with the notebooks, and a second place where
+"clean" means something else is the thing the pinned rule set exists to avoid.
 
 **`uv run ruff format .` passes too.** Double quotes, ruff's default, matching
 `panoptes-pipeline`. Let the formatter decide: don't hand-wrap a line shorter

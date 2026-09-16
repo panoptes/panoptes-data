@@ -32,8 +32,6 @@ pip install panoptes-data
 
 ## Examples
 
-See the example Jupyter Notebooks in the `notebooks/` directory.
-
 ### Finding observations
 
 ```py
@@ -123,6 +121,56 @@ pairs = find_simultaneous(get_all_observations(), across="camera_id")
 Pairing is on overlap between each sequence's `start_time` and `end_time`, not
 on a calendar date: the units sit at different longitudes, so any UTC-based
 "night" is the wrong slice of the night for somebody.
+
+### Working with the results
+
+The result is a DataFrame, so the survey-wide questions are ordinary pandas.
+Reading the index is the expensive part, so read it once and pass it back in as
+`source` rather than searching from scratch:
+
+```py
+from panoptes.data.search import get_all_observations, search_observations
+
+observations = get_all_observations()
+
+# Which fields have the most frames, and roughly where are they?
+totals = (
+    observations.groupby("field_name")
+    .agg(
+        num_frames=("num_frames", "sum"),
+        num_usable=("num_usable", "sum"),
+        total_exptime=("total_exptime", "sum"),
+        mount_ra=("mount_ra", "median"),
+        mount_dec=("mount_dec", "median"),
+    )
+    .sort_values("num_frames", ascending=False)
+)
+
+# Everything around the busiest field, whatever each observation called it.
+top = totals.iloc[0]
+nearby = search_observations(
+    ra=top.mount_ra, dec=top.mount_dec, min_num_frames=10, source=observations
+)
+```
+
+`source` is never modified in place.
+
+### Reading one observation's frames
+
+```py
+from panoptes.data.observations import ObservationInfo
+
+obs_info = ObservationInfo(meta=nearby.iloc[0])
+
+# One row per frame, indexed on image time. Defaults to the frames the
+# pipeline processed cleanly; pass image_query='' for every frame it has.
+obs_info.image_metadata.to_csv(f"{obs_info.sequence_id}-image-metadata.csv")
+
+# Where each frame is. Paths under PANOPTES_ARCHIVE_ROOT when one is set,
+# archive URLs otherwise -- which name where a frame lives, but nothing
+# serves them.
+obs_info.image_list
+```
 
 ### Configuration
 

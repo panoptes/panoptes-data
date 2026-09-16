@@ -227,6 +227,13 @@
 
 ### Removed
 
+- The two example notebooks, and with them the `notebooks/` ruff exclusion.
+  Their worked examples are in the README, where they are read without being
+  run and cannot re-dirty themselves; what did not survive the move is the part
+  that no longer works -- both ended in building a `wget` list from archive
+  URLs that 404 anonymously, and one opened by pip-installing a plotting
+  package to draw a calendar.
+
 - `SurveySettings.img_metadata_url` and `SurveySettings.observations_url`, and
   with them the last two things this package fetched over the network. Nothing
   serves either one with current data.
