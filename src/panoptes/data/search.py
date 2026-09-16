@@ -417,9 +417,7 @@ def search_observations(
         field_name (str|list|None): A str or list of strs of field names to
             include. Default `None` will include all.
         camera_id (str|list|None): A str or list of strs of camera uids to
-            include. Default `None` will include all. Note that a camera uid is
-            not a camera *model*: no document records one, so it cannot be
-            filtered on here.
+            include. Default `None` will include all.
         query (str|None): A `pandas.DataFrame.query` string applied last, so it
             can mention every column of the result -- including `exptime` and
             the per-frame header facts `add_frame_facts` attaches, e.g.

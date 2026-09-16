@@ -193,9 +193,7 @@ not from any URL field.
   derives pointing. They get no drift companion on purpose: a cone is a
   membership test that drift can move a sequence into, whereas "ISO 100" is a
   description, and widening it per row would make one threshold mean a
-  different thing for every sequence. Camera *model* is not among them and
-  cannot be — no document records one (contract 9 names the nine header facts
-  selection may cut on).
+  different thing for every sequence.
 - **`find_simultaneous` pairs on time overlap, never on a "night".** The units
   sit at different longitudes, so a UTC calendar date is a different slice of
   the observing night for each of them. `start_time`/`end_time` are contract

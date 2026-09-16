@@ -106,9 +106,6 @@
   widening it per row would make one threshold mean a different thing for every
   sequence.
 
-  Camera *model* is not among them, and cannot be: no document records one. The
-  camera uid is `camera_id` and is filterable.
-
 - `find_simultaneous` pairs sequences of one field recorded at the same time by
   different cameras or different units -- the control the photometry rebuild
   compares against, since the sky was the same and the hardware was not.
