@@ -201,6 +201,22 @@
   half, and it fails on a schedule rather than in a user's environment. It can
   also be run on demand.
 
+- Docstrings parse cleanly. `griffe` -- which is what `mkdocstrings` reads --
+  had twelve complaints, and each was a real ambiguity rather than a style
+  preference. Six parameters and three return values had neither a type in the
+  signature nor one in the docstring, so the rendered reference showed no type
+  at all: `ObservationInfo.__init__`'s `sequence_id`, `meta` and `image_query`,
+  `get_metadata`'s `query`, and `get_all_observations`' `index_root`.
+
+  Two `Returns:` blocks were being read as *two* return values each, because a
+  continuation line sat at the same indentation as the line it continued.
+  `get_image_list`'s `Args:` names carried a stray leading space, which moved
+  the indentation its continuation lines were measured against.
+
+  `get_all_observations(settings: SurveySettings = None)` also said its
+  `settings` argument was non-optional while defaulting it to `None`; it is
+  `SurveySettings | None` now.
+
 ### Release tooling
 
 - Releases are published to PyPI with Trusted Publishing rather than a

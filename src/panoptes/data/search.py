@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime as dt
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -232,7 +233,10 @@ def search_observations(
     return obs_df
 
 
-def get_all_observations(settings: SurveySettings = None, index_root=None) -> pd.DataFrame:
+def get_all_observations(
+    settings: SurveySettings | None = None,
+    index_root: Path | str | None = None,
+) -> pd.DataFrame:
     """Every sequence in the index, with its pointing attached.
 
     Reads ``observations.parquet``, the query surface `panoptes-pipeline`

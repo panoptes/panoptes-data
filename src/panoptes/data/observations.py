@@ -1,6 +1,7 @@
 import warnings
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from astropy.nddata import CCDData, Cutout2D
@@ -90,9 +91,9 @@ class ObservationInfo:
 
     def __init__(
         self,
-        sequence_id=None,
-        meta=None,
-        image_query=USABLE_QUERY,
+        sequence_id: str | None = None,
+        meta: Any = None,
+        image_query: str = USABLE_QUERY,
         processed_root: Path | str | None = None,
     ):
         """Initialize the observation info with a sequence_id.
@@ -181,7 +182,7 @@ class ObservationInfo:
         return self.observation.get("params_fingerprint")
 
     @property
-    def public_urls(self):
+    def public_urls(self) -> pd.DataFrame:
         """The browsable URLs carried by the metadata, if any.
 
         Under the contract these are decorations added by whatever uploads the
@@ -193,7 +194,7 @@ class ObservationInfo:
 
         Returns:
             A DataFrame of whichever ``*_url`` columns are present, which may
-            have no columns.
+                have no columns.
         """
         return self.image_metadata.filter(regex=r"_url$")
 
@@ -219,7 +220,7 @@ class ObservationInfo:
 
         return ccd0
 
-    def get_metadata(self, query=""):
+    def get_metadata(self, query: str = "") -> pd.DataFrame:
         """Read the per-frame documents of this observation.
 
         One row per ``metadata.json``, with the document's nested maps
@@ -278,7 +279,7 @@ class ObservationInfo:
         bucket: str | None = None,
         file_ext: str = ".fits.fz",
         archive_root: Path | str | None = None,
-    ):
+    ) -> list[Path] | list[str]:
         """Resolve the observation's raw frames to where they can be read.
 
         Each frame's location is derived from its ``image_uid``, which the
@@ -312,17 +313,18 @@ class ObservationInfo:
         directly -- to inspect a sequence whose frames are not all on hand.
 
         Args:
-             bucket: The bucket the URLs are built against. Ignored when an
+            bucket: The bucket the URLs are built against. Ignored when an
                 archive root is in play, which is what keeps the bucket name
                 out of local paths.
-             file_ext: The file extension of the images to retrieve. Matched
+            file_ext: The file extension of the images to retrieve. Matched
                 exactly against the local archive: the layout there is the
                 bucket's layout, and the extension is part of it.
-             archive_root: A local copy of the raw archive, overriding the
+            archive_root: A local copy of the raw archive, overriding the
                 ``archive_root`` setting for this call.
+
         Returns:
             A list of `Path` under an archive root, or of URL strings without
-            one, in metadata order and one per image.
+                one, in metadata order and one per image.
 
         Raises:
             ValueError: if an ``image_uid`` is not a well-formed archive path.
