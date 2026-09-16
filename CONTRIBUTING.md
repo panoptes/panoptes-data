@@ -16,8 +16,9 @@ column means is usually a question about the contract.
 
 Please check the [issue tracker] first — including closed issues, since the
 answer is often there. When reporting a bug, include the version
-(`panoptes-data --help` or `pip show panoptes-data`), your operating system and
-Python version, and the steps to reproduce it.
+(`pip show panoptes-data`, or `python -c "import panoptes.data;
+print(panoptes.data.__version__)"`), your operating system and Python version,
+and the steps to reproduce it.
 
 Bugs in how data is *produced* belong in the repository that produces it. POCS
 writes the FITS headers, `panoptes-utils` is the shared base,
@@ -28,9 +29,10 @@ whichever repository the reader is looking at.
 
 ## Getting set up
 
-Everything goes through [uv]. `requires-python` is `>=3.12`, and `uv` resolves a
-matching interpreter on its own, so there is no virtual environment to create
-by hand:
+Development goes through [uv] -- the release build is the one exception, and it
+is described under *Releases* below. `requires-python` is `>=3.12`, and `uv`
+resolves a matching interpreter on its own, so there is no virtual environment
+to create by hand:
 
 ```bash
 git clone git@github.com:panoptes/panoptes-data.git
@@ -98,10 +100,12 @@ uv run --group docs zensical serve
 ```
 
 Every page in `docs/` is either a snippet line including a file from the
-repository root or a `:::` block naming a module for `mkdocstrings`. Prose that
-belongs to the package belongs in a docstring or in a root Markdown file — see
-`docs/building.md`. Improvements to docstrings are as welcome as improvements to
-code, and they are the API reference.
+repository root or a `:::` block naming a module for `mkdocstrings`. The one
+exception is `docs/building.md`, which is prose about the documentation build
+itself and so has nowhere else to live. Everything else that belongs to the
+package belongs in a docstring or in a root Markdown file, or it becomes the
+next thing to keep in step by hand. Improvements to docstrings are as welcome as
+improvements to code, and they are the API reference.
 
 ## Submitting your contribution
 
