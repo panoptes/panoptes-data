@@ -182,9 +182,24 @@
   `panoptes-pipeline`'s. One style across the fleet is worth one reformatting
   commit; the reformat is that commit and touches nothing else.
 
-- CI lints. `ruff check .` and `ruff format --check .` run as their own job on
-  every push and pull request, because a pinned rule set nothing runs is
+- CI lints. `ruff check .` and `ruff format --check .` run as their own job,
+  on pushes to `main` and on pull requests targeting it -- the same triggers
+  the test workflow already used -- because a pinned rule set nothing runs is
   documentation rather than a gate.
+
+- `uv.lock` is committed, and the test job installs with `uv sync --locked`.
+  A library's lockfile constrains nobody downstream -- only the bounds in
+  `[project.dependencies]` do that -- so this is for contributors: a red run
+  now means the change under review broke something, rather than that a
+  dependency shipped overnight. `--locked` fails instead of re-resolving, so a
+  dependency edit that skipped `uv lock` is caught rather than silently tested
+  against something else.
+
+- A weekly canary runs the suite against a *fresh* resolution, ignoring the
+  lockfile. Pinning makes pull-request CI attributable at the cost of nothing
+  noticing an upstream break until someone relocks; the canary is the other
+  half, and it fails on a schedule rather than in a user's environment. It can
+  also be run on demand.
 
 ### Release tooling
 

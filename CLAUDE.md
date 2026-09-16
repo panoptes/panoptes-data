@@ -4,17 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this package is
 
-`panoptes-data` **reads**. It does not produce anything. Every piece of metadata
-it serves comes from documents [`panoptes-pipeline`][pipeline] wrote, and every
-frame it resolves comes from the raw archive the units uploaded. Nothing here
-writes into either tree.
+`panoptes-data` **reads**. It does not produce anything. Its metadata comes
+from the documents under the processed tree — written by
+[`panoptes-pipeline`][pipeline], plus whatever decorations the uploader of the
+products added, which is where the optional `*_url` fields in `public_urls`
+come from — and every frame it resolves comes from the raw archive the units
+uploaded. Nothing here writes into either tree.
 
-That makes the [data contract][contract] the governing document. Field names,
+That makes the [data contract][contract] the governing document: field names,
 the flattening separator, the dropped blocks, the required columns and the
-status vocabulary are all declared there and read back from `schema.json`;
-they are not inferred from whatever happened to be in a record. Cite its
-sections by number in comments and commit messages ("data contract 3.2"), as
-the sibling repositories do.
+status vocabulary are declared there rather than inferred from whatever
+happened to be in a record. Of those, the ones `schema.json` carries — and so
+the ones `contract_for` reads back at runtime — are the separator, the dropped
+blocks and the required frame columns. The status vocabulary is not in the
+manifest; it is mirrored in `settings.py`. Cite the contract's sections by
+number in comments and commit messages ("data contract 3.2"), as the sibling
+repositories do.
 
 [pipeline]: https://github.com/panoptes/panoptes-pipeline
 [contract]: https://github.com/panoptes/panoptes-pipeline/blob/main/plans/data-contract.md
@@ -41,8 +46,15 @@ retrying blindly.
 `hatchling` is the build backend and `hatch-vcs` derives the version from the
 git tag, so the `[build-system]`, `[tool.hatch.version]` and
 `[tool.hatch.build*]` blocks are load-bearing. There are no `hatch` *envs*:
-development goes through `uv` and `[dependency-groups]`, as it does everywhere
-else in the fleet. Don't reintroduce a second way to run the tests.
+local development, the lint job and the test job go through `uv` and
+`[dependency-groups]`, as they do everywhere else in the fleet. Don't add a
+second way to install the test dependencies — that is what the hatch envs were,
+a hand-copy of the `test` group that could drift from it.
+
+The one path still on `pip` is the docs workflow, which installs
+`docs/requirements.txt`. That file hand-copies the runtime dependencies and is
+the same drift waiting to happen; migrating it is unfinished work, not a
+design.
 
 ### Linting
 
@@ -82,8 +94,10 @@ conflating them is the most common mistake here:
 `image_status` against them should not have to install the producer — the
 pipeline owns the definitions (contract 5.2).
 
-**`documents.py`** — the contract layer, and the only module that touches the
-filesystem or parquet. It carries constants (`SEPARATOR`, `DROPPED`,
+**`documents.py`** — the contract layer, and the only module that reads the
+processed tree or the parquet index. (It is not the only filesystem access in
+the package: `ObservationInfo.get_image_list` stats frames under the archive
+root, and the CLI writes CSVs.) It carries constants (`SEPARATOR`, `DROPPED`,
 `REQUIRED_FRAME_COLUMNS`, `SCHEMA_VERSION`) that **deliberately duplicate**
 `panoptes.pipeline.index` rather than importing it. This package does not
 depend on the producer; it depends on the contract both follow. Do not
@@ -136,11 +150,14 @@ not from any URL field.
 - **RA is angular everywhere.** Averaged via the mean unit vector, compared
   through `wrap_degrees`. Comparing raw degrees made every cone spanning 0h
   return nothing.
-- **There is no cloud path and no fallback.** The Firestore-derived
+- **There is no cloud *source* and no download path.** The Firestore-derived
   `observations.csv` and the `get-observation-info` function are gone because
-  nothing produces them (panoptes/panoptes-data#15), and archived frames 404 anonymously in every
-  era of the bucket (panoptes/panoptes-data#17) — so `download_images` and the `download` CLI command
-  raise rather than returning an empty list. Do not reintroduce either.
+  nothing produces them (panoptes/panoptes-data#15), and archived frames 404
+  anonymously in every era of the bucket (panoptes/panoptes-data#17) — so
+  `download_images` and the `download` CLI command raise rather than returning
+  an empty list. Do not reintroduce either. Archive *URLs* are still produced:
+  with no `archive_root` configured, `get_image_list` returns them, because
+  naming where a frame lives is useful even when nothing will serve it.
 - Parquet over CSV is load-bearing: dtypes live in the file, so a serial like
   `032071000633` comes back a string instead of `3.207100e+10` (panoptes/panoptes-data#13).
 
